@@ -120,6 +120,29 @@
         .card-green { background: linear-gradient(135deg, #064E3B 0%, #10B981 100%); }
         .card-dark { background: linear-gradient(135deg, #111827 0%, #374151 100%); }
         .card-rose { background: linear-gradient(135deg, #881337 0%, #F43F5E 100%); }
+
+        /* 高對比、主題適應性狀態標籤配色彩色 */
+        .status-badge-charging {
+            background-color: #E0F2FE; /* 亮粉藍 */
+            color: #0369A1;            /* 深粉藍 */
+        }
+        .status-badge-warning {
+            background-color: #FEF3C7; /* 亮粉橘 */
+            color: #B45309;            /* 深粉橘 */
+        }
+        .status-badge-danger {
+            background-color: #FEE2E2; /* 亮粉紅 */
+            color: #B91C1C;            /* 深粉紅 */
+        }
+
+        /* 深色模式下的狀態標籤優化 */
+        [data-theme='dark'] .status-badge-charging { background-color: rgba(30, 58, 138, 0.4); color: #60A5FA; }
+        [data-theme='dark'] .status-badge-warning { background-color: rgba(120, 53, 4, 0.4); color: #FBBF24; }
+        [data-theme='dark'] .status-badge-danger { background-color: rgba(127, 29, 29, 0.4); color: #F87171; }
+
+        [data-theme='forest'] .status-badge-charging { background-color: rgba(6, 78, 59, 0.4); color: #34D399; }
+        [data-theme='lavender'] .status-badge-charging { background-color: rgba(76, 29, 149, 0.4); color: #C4B5FD; }
+        [data-theme='ocean'] .status-badge-charging { background-color: rgba(30, 58, 138, 0.4); color: #38BDF8; }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
@@ -136,7 +159,7 @@
             
             <!-- 雲端同步狀態與按鈕 -->
             <div class="flex items-center space-x-3">
-                <span id="sync-status" class="text-sm px-3 py-1.5 rounded-full bg-bgMain border border-borderMain text-textDim flex items-center gap-2 transition-all duration-300 font-bold">
+                <span id="sync-status" class="text-sm px-3 py-1.5 rounded-full bg-bgMain border border-borderMain text-textDim flex items-center gap-2 transition-all duration-300 font-bold cursor-pointer">
                     <span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse"></span> 本機儲存
                 </span>
                 <button onclick="openSyncSettings()" class="text-textDim hover:text-textMain transition p-2 rounded-xl hover:bg-bgMain">
@@ -401,7 +424,7 @@
             </div>
             
             <div class="text-center text-xs text-textDim font-mono">
-                CardControl Version 1.3.0 (Sync Security Fixed)
+                CardControl Version 1.3.1 (Dual-Sync Master)
             </div>
         </section>
     </main>
@@ -555,7 +578,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-bold text-textDim mb-1.5">消費通路 / 商家</label>
-                        <input type="text" id="record-channel" placeholder="例如：7-11、新光三越" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                        <input type="text" id="record-channel" placeholder="example：7-11、新光三越" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-textDim mb-1.5">品項說明 / 備註</label>
@@ -609,7 +632,7 @@
             <p id="confirm-msg" class="text-sm text-textDim leading-relaxed font-medium"></p>
             <div class="flex gap-2">
                 <button id="confirm-cancel" class="flex-1 py-2.5 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition">取消</button>
-                <button id="confirm-ok" class="flex-1 py-2.5 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-sm font-bold transition">確定</button>
+                <button onclick="document.getElementById('modal-confirm').classList.add('hidden')" class="flex-1 py-2.5 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-sm font-bold transition">確定</button>
             </div>
         </div>
     </div>
@@ -675,9 +698,13 @@
                 cards = JSON.parse(storedCards);
                 records = JSON.parse(storedRecords);
             } else {
+                // 【核心修正】：全新裝置載入預設範例，但強制將最後更新時間設為 1970 歷史起點
                 cards = defaultData.cards;
                 records = defaultData.records;
-                saveToLocal();
+                localStorage.setItem('cc_cards', JSON.stringify(cards));
+                localStorage.setItem('cc_records', JSON.stringify(records));
+                localStorage.setItem('cc_other_pay', '街口支付');
+                localStorage.setItem('cc_last_local_update', new Date(0).toISOString()); // 1970-01-01T00:00:00.000Z
             }
 
             if (storedOtherPay) {
@@ -691,6 +718,7 @@
 
             // 初始畫面渲染
             initApp();
+            updateSyncBadge('disconnected');
             
             // 載入 Google Drive SDK
             try {
@@ -927,15 +955,15 @@
                 `;
                 container.appendChild(cardEl);
 
-                // 2. 建立額度極大化進度視窗
+                // 2. 建立額度極大化進度視窗 (【高易讀性配色優化】：改用 CSS 動態高對比邊界標籤)
                 const limitCard = document.createElement('div');
                 limitCard.className = "space-y-2";
                 
-                let statusBadge = `<span class="text-xs bg-blue-900/50 text-blue-400 px-2.5 py-1 rounded-full font-bold">刷卡中</span>`;
+                let statusBadge = `<span class="text-xs px-2.5 py-1 rounded-full font-bold status-badge-charging">刷卡中</span>`;
                 if (pct >= 90 && pct < 100) {
-                    statusBadge = `<span class="text-xs bg-amber-950 text-amber-500 px-2.5 py-1 rounded-full font-bold">接近上限</span>`;
+                    statusBadge = `<span class="text-xs px-2.5 py-1 rounded-full font-bold status-badge-warning">接近上限</span>`;
                 } else if (pct >= 100) {
-                    statusBadge = `<span class="text-xs bg-red-950 text-red-500 px-2.5 py-1 rounded-full font-bold">已達回饋上限 (請換卡)</span>`;
+                    statusBadge = `<span class="text-xs px-2.5 py-1 rounded-full font-bold status-badge-danger">已達回饋上限 (請換卡)</span>`;
                 }
 
                 limitCard.innerHTML = `
@@ -995,7 +1023,7 @@
             const sortedRecords = [...records].sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time)).slice(0, 3);
             
             if (sortedRecords.length === 0) {
-                recentContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">目前尚無任何刷卡消費紀錄</p>`;
+                recentContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">目 前 尚無任何刷卡消費紀錄</p>`;
                 return;
             }
 
@@ -1582,7 +1610,7 @@
         }
 
         // ================================= E: 設定與雲端備份 =================================
-        // 背景自動快取融合機制
+        // 背景自動快取融合機制 (【核心優化】：有卡片變動時自動觸發)
         function triggerAutoCloudSync() {
             if (googleAccessToken) {
                 executeCloudSync(true);
@@ -1607,8 +1635,8 @@
             localStorage.setItem('cc_google_api_key', apiKey);
             localStorage.setItem('cc_google_sync_enabled', 'true');
             
-            showToast('Google API 設定已儲存！請嘗試進行同步。', 'success');
-            document.getElementById('google-sync-btn').disabled = false;
+            showToast('Google API 設定已儲存！正在重整頁面載入同步模組...', 'success');
+            setTimeout(() => { location.reload(); }, 1000);
         }
 
         function exportData() {
@@ -1687,7 +1715,7 @@
                         
                         document.getElementById('google-sync-btn').disabled = false;
                         updateSyncBadge('connected');
-                        executeCloudSync(); // 顯性手動點擊
+                        executeCloudSync(false); // 顯性手動點擊
                     },
                 });
                 gisInited = true;
@@ -1705,22 +1733,36 @@
             if (cachedToken && expiry && Date.now() < parseInt(expiry)) {
                 googleAccessToken = cachedToken;
                 updateSyncBadge('connected');
-                executeCloudSync(true); // 自動背景快取靜默同步
+                executeCloudSync(true); // 自動背景快取靜默同步 (一開App立即抓取最新)
             }
         }
 
         function updateSyncBadge(status) {
             const badge = document.getElementById('sync-status');
+            badge.onclick = null; // 重設
             if (status === 'connected') {
-                badge.className = "text-sm px-3 py-1.5 rounded-full bg-green-950 text-emerald-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 已連結 Google`;
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-green-950 text-emerald-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 雲端連線中`;
+                badge.onclick = () => { syncWithGoogle(); };
             } else if (status === 'syncing') {
                 badge.className = "text-sm px-3 py-1.5 rounded-full bg-amber-950 text-amber-500 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
                 badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> 正在同步中`;
             } else if (status === 'success') {
                 badge.className = "text-sm px-3 py-1.5 rounded-full bg-blue-950 text-blue-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
                 badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-400"></span> 雲端同步成功`;
-                setTimeout(() => { if (googleAccessToken) updateSyncBadge('connected'); }, 4000);
+                setTimeout(() => { if (googleAccessToken) updateSyncBadge('connected'); else updateSyncBadge('disconnected'); }, 4000);
+            } else if (status === 'expired') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-red-950 text-red-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> 連線逾期，點此`;
+                badge.onclick = () => { syncWithGoogle(); };
+            } else if (status === 'error') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-red-950 text-red-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> 同步失敗，點此`;
+                badge.onclick = () => { syncWithGoogle(); };
+            } else {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-bgMain border border-borderMain text-textDim flex items-center gap-2 transition-all duration-300 font-bold cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse"></span> 未連結，點此同步`;
+                badge.onclick = () => { syncWithGoogle(); };
             }
         }
 
@@ -1730,7 +1772,7 @@
                 if (googleTokenClient) {
                     googleTokenClient.requestAccessToken({ prompt: 'consent' });
                 } else {
-                    showToast('請先於下方設定中儲存您的 Google API 金鑰與 Client ID！', 'warn');
+                    showToast('請先於設定中儲存您的 Google API 金鑰與 Client ID！', 'warn');
                     switchTab('settings');
                 }
             } else {
@@ -1777,14 +1819,15 @@
                         const cloudTime = new Date(cloudData.lastUpdated);
                         const localTime = localUpdateTimeStr ? new Date(localUpdateTimeStr) : new Date(0);
                         
-                        // 雙向融合機制：本機為空（新設備）或雲端最新時，強制下拉覆寫本機
-                        if (cards.length === 0 || cloudTime > localTime) {
+                        // 【雙向融合核心邏輯修正】：
+                        // 本機為 epoch (全新裝置首次登入) 或者是雲端時間較新時 -> 無條件強制下載覆寫，完美拉取電腦資料
+                        if (localTime.getTime() === 0 || cloudTime > localTime) {
                             cards = cloudData.cards || [];
                             records = cloudData.records || [];
                             localStorage.setItem('cc_cards', JSON.stringify(cards));
                             localStorage.setItem('cc_records', JSON.stringify(records));
                             localStorage.setItem('cc_last_local_update', cloudData.lastUpdated);
-                            if (!isBackground) showToast('已成功從雲端下載並同步為最新的資料！', 'success');
+                            if (!isBackground) showToast('已成功從雲端同步下載最新資料！', 'success');
                             initApp();
                             updateSyncBadge('success');
                             return;
@@ -1804,8 +1847,14 @@
                 
             } catch(err) {
                 console.error("同步失敗詳細資訊：", err);
-                if (!isBackground) showToast('雲端連結被拒，請重新點選同步。', 'error');
-                updateSyncBadge('connected');
+                if (err.status === 401) {
+                    googleAccessToken = null;
+                    localStorage.removeItem('cc_google_access_token');
+                    updateSyncBadge('expired');
+                } else {
+                    if (!isBackground) showToast('雲端連結被拒，請點擊同步按鈕重新驗證。', 'error');
+                    updateSyncBadge('error');
+                }
             }
         }
 
