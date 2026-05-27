@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <title>卡控 CardControl - 頂級信用卡與消費管理系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Platform Library -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 使用 CSS 變數來達成動態主題切換
+                        bgMain: 'var(--bg-main)',
+                        bgCard: 'var(--bg-card)',
+                        textMain: 'var(--text-main)',
+                        textDim: 'var(--text-dim)',
+                        accentPrimary: 'var(--accent-primary)',
+                        accentSecondary: 'var(--accent-secondary)',
+                        borderMain: 'var(--border-main)',
+                    },
+                    fontFamily: {
+                        sans: ['PingFang TC', 'Heiti TC', 'Noto Sans TC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            /* 預設: 極地純白 (Light Slate) - 提升對比度與易讀性，防吃力 */
+            --bg-main: #F1F5F9;
+            --bg-card: #FFFFFF;
+            --text-main: #0F172A; /* 極深藍灰，最高對比度 */
+            --text-dim: #334155;  /* 深灰色，確保輔助說明字依然清晰 */
+            --accent-primary: #1D4ED8; /* 飽和深藍色，按鈕高辨識度 */
+            --accent-secondary: #4338CA;
+            --border-main: #CBD5E1;
+        }
+
+        [data-theme='dark'] {
+            /* 深邃午夜 (Midnight Dark) */
+            --bg-main: #090D16;
+            --bg-card: #131926;
+            --text-main: #E2E8F0;
+            --text-dim: #94A3B8;
+            --accent-primary: #3B82F6;
+            --accent-secondary: #6366F1;
+            --border-main: #1F2937;
+        }
+
+        [data-theme='forest'] {
+            /* 翡翠森林 */
+            --bg-main: #061A14;
+            --bg-card: #0C2D24;
+            --text-main: #ECFDF5;
+            --text-dim: #A7F3D0;
+            --accent-primary: #10B981;
+            --accent-secondary: #059669;
+            --border-main: #134E42;
+        }
+
+        [data-theme='lavender'] {
+            /* 浪漫薰衣草 */
+            --bg-main: #0F0B1A;
+            --bg-card: #1E1631;
+            --text-main: #F5F3FF;
+            --text-dim: #C4B5FD;
+            --accent-primary: #8B5CF6;
+            --accent-secondary: #7C3AED;
+            --border-main: #31264E;
+        }
+
+        [data-theme='ocean'] {
+            /* 湛藍海洋 */
+            --bg-main: #08141E;
+            --bg-card: #0F2537;
+            --text-main: #F0F9FF;
+            --text-dim: #BAE6FD;
+            --accent-primary: #0EA5E9;
+            --accent-secondary: #0284C7;
+            --border-main: #1E3A8A;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        /* 隱藏滾動條但保持滾動功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .safe-top {
+            padding-top: env(safe-area-inset-top);
+        }
+        
+        /* 卡片漸變質感 */
+        .card-gold { background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%); }
+        .card-blue { background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); }
+        .card-purple { background: linear-gradient(135deg, #4C1D95 0%, #8B5CF6 100%); }
+        .card-green { background: linear-gradient(135deg, #064E3B 0%, #10B981 100%); }
+        .card-dark { background: linear-gradient(135deg, #111827 0%, #374151 100%); }
+        .card-rose { background: linear-gradient(135deg, #881337 0%, #F43F5E 100%); }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- 頂部導覽列 -->
+    <header class="bg-bgCard border-b border-borderMain safe-top flex-none z-30">
+        <div class="px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-accentPrimary to-accentSecondary flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-credit-card text-white text-base"></i>
+                </div>
+                <span class="text-2xl font-black tracking-wider text-textMain">卡控 CardControl</span>
+            </div>
+            
+            <!-- 雲端同步狀態與按鈕 -->
+            <div class="flex items-center space-x-3">
+                <span id="sync-status" class="text-sm px-3 py-1.5 rounded-full bg-bgMain border border-borderMain text-textDim flex items-center gap-2 transition-all duration-300 font-bold">
+                    <span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse"></span> 本機儲存
+                </span>
+                <button onclick="openSyncSettings()" class="text-textDim hover:text-textMain transition p-2 rounded-xl hover:bg-bgMain">
+                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 overflow-y-auto no-scrollbar w-full bg-bgMain pb-20">
+        
+        <!-- ================= 視圖 A: 儀表板 Dashboard ================= -->
+        <section id="view-dashboard" class="view-section space-y-6 animate-fade-in">
+            
+            <!-- 擬真卡片展示滑動區 -->
+            <div class="w-full pt-4">
+                <div class="px-4 flex justify-between items-center mb-2">
+                    <h2 class="text-base font-bold text-textDim tracking-wider">我的卡片精選</h2>
+                    <button onclick="switchTab('cards')" class="text-sm text-accentPrimary font-bold">管理卡片 <i class="fa-solid fa-chevron-right ml-1"></i></button>
+                </div>
+                
+                <!-- 橫向滑動卡片容器 -->
+                <div id="dashboard-cards-container" class="flex gap-4 overflow-x-auto px-4 py-2 no-scrollbar scroll-smooth snap-x snap-mandatory">
+                    <!-- 動態生成卡片 -->
+                </div>
+            </div>
+
+            <!-- 卡片額度極大化進度區 -->
+            <div class="px-4">
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-base font-bold text-textMain">當前卡片回饋最佳化狀態</h3>
+                        <span id="current-card-period" class="text-sm text-textDim font-bold font-mono">結帳週期</span>
+                    </div>
+                    
+                    <div id="rewards-limit-container" class="space-y-4">
+                        <!-- 動態生成回饋額度條 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 當月消費速覽指標 -->
+            <div class="px-4 grid grid-cols-2 gap-4">
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 flex flex-col justify-between shadow-sm">
+                    <span class="text-sm text-textDim font-bold mb-2">日曆月總消費</span>
+                    <div>
+                        <span id="calendar-total" class="text-3xl font-black text-textMain font-mono">NT$ 0</span>
+                        <div class="text-xs text-textDim mt-1.5 font-medium">本月 1 號至今</div>
+                    </div>
+                </div>
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 flex flex-col justify-between shadow-sm">
+                    <span class="text-sm text-textDim font-bold mb-2">最常使用支付</span>
+                    <div>
+                        <span id="top-pay-method" class="text-xl font-black text-accentPrimary truncate block">實體卡</span>
+                        <div id="top-pay-count" class="text-xs text-textDim mt-1.5 font-medium">消費 0 次</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快捷記帳功能 -->
+            <div class="px-4">
+                <div class="bg-gradient-to-r from-accentPrimary/10 to-accentSecondary/10 border border-borderMain rounded-2xl p-5 flex justify-between items-center shadow-md">
+                    <div class="space-y-1">
+                        <h4 class="text-base font-bold text-textMain">隨手紀錄新消費</h4>
+                        <p class="text-sm text-textDim font-medium">快速記下您剛剛刷了哪張卡與通路</p>
+                    </div>
+                    <button onclick="openAddRecordModal()" class="w-14 h-14 rounded-full bg-accentPrimary text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform flex-shrink-0">
+                        <i class="fa-solid fa-plus text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 最近 3 筆消費紀錄 -->
+            <div class="px-4">
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-base font-bold text-textMain">最近刷卡紀錄</h3>
+                        <button onclick="switchTab('records')" class="text-sm text-textDim font-bold hover:text-textMain">看全部</button>
+                    </div>
+                    <div id="dashboard-recent-records" class="space-y-4">
+                        <!-- 動態生成最近消費 -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ================= 視圖 B: 卡片管理 Cards ================= -->
+        <section id="view-cards" class="view-section hidden space-y-6 px-4 pt-4 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-textMain">信用卡清單</h2>
+                <button onclick="openCardModal()" class="px-4 py-2 rounded-xl bg-accentPrimary text-white text-sm font-bold flex items-center gap-1.5 shadow-md">
+                    <i class="fa-solid fa-plus"></i> 新增信用卡
+                </button>
+            </div>
+
+            <div id="cards-list-container" class="space-y-5">
+                <!-- 動態生成卡片清單 -->
+            </div>
+        </section>
+
+        <!-- ================= 視圖 C: 刷卡明細 Records ================= -->
+        <section id="view-records" class="view-section hidden space-y-4 px-4 pt-4 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-textMain">刷卡明細</h2>
+                <div class="flex gap-2">
+                    <!-- 周期切換開關 -->
+                    <select id="record-period-filter" onchange="renderRecordsList()" class="bg-bgCard border border-borderMain text-sm text-textMain px-3 py-2 rounded-xl focus:outline-none focus:border-accentPrimary font-mono font-bold shadow-sm">
+                        <option value="all">全部紀錄</option>
+                        <option value="calendar">本月(日曆月)</option>
+                        <option value="billing">當前帳單期</option>
+                    </select>
+                    <button onclick="openAddRecordModal()" class="px-4 py-2 rounded-xl bg-accentPrimary text-white text-sm font-bold flex items-center gap-1.5 shadow-md">
+                        <i class="fa-solid fa-plus"></i> 記一筆
+                    </button>
+                </div>
+            </div>
+
+            <!-- 卡片篩選快捷區 (橫向滑動) -->
+            <div id="record-card-filter-container" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                <!-- 動態生成卡片篩選按鈕 -->
+            </div>
+
+            <!-- 記錄列表 -->
+            <div id="records-list-container" class="space-y-3">
+                <!-- 動態生成刷卡明細 -->
+            </div>
+        </section>
+
+        <!-- ================= 視圖 D: 消費圖表 Charts ================= -->
+        <section id="view-charts" class="view-section hidden space-y-6 px-4 pt-4 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-textMain">消費分析圖表</h2>
+                <!-- 篩選器 -->
+                <select id="chart-time-filter" onchange="updateCharts()" class="bg-bgCard border border-borderMain text-sm text-textMain px-3 py-2 rounded-xl focus:outline-none font-mono font-bold shadow-sm">
+                    <option value="current-month">本月 (1號-今日)</option>
+                    <option value="last-30">最近 30 天</option>
+                    <option value="all">所有歷史紀錄</option>
+                </select>
+            </div>
+
+            <!-- 圖表卡片 A: 支付方式比例 (圓餅圖) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                <h3 class="text-base font-bold text-textMain mb-4">支付管道分佈</h3>
+                <div class="relative w-full aspect-square max-h-[320px] flex justify-center">
+                    <canvas id="payMethodChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 圖表卡片 B: 消費趨勢 analysis (折線圖) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                <h3 class="text-base font-bold text-textMain mb-4">消費趨勢 (每日累計金額)</h3>
+                <div class="relative w-full h-[240px]">
+                    <canvas id="trendLineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 圖表卡片 C: 每張卡片消費總額 (長條圖) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                <h3 class="text-base font-bold text-textMain mb-4">各卡消費總額</h3>
+                <div class="relative w-full h-[240px]">
+                    <canvas id="cardUsageChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 視圖 E: 設定 Settings ================= -->
+        <section id="view-settings" class="view-section hidden space-y-6 px-4 pt-4 animate-fade-in">
+            <h2 class="text-xl font-black text-textMain">設定管理</h2>
+
+            <!-- 主題顏色切換器 -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-4 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-palette text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">介面主題風格</h3>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="changeTheme('light')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-white hover:scale-105 transition shadow-sm">
+                        <div class="w-full h-9 rounded-lg bg-blue-500"></div>
+                        <span class="text-xs font-bold text-gray-800">極地純白</span>
+                    </button>
+                    <button onclick="changeTheme('dark')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#090D16] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-blue-600"></div>
+                        <span class="text-xs font-bold text-white">深邃午夜</span>
+                    </button>
+                    <button onclick="changeTheme('forest')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#061A14] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-emerald-600"></div>
+                        <span class="text-xs font-bold text-emerald-100">翡翠森林</span>
+                    </button>
+                    <button onclick="changeTheme('lavender')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#0F0B1A] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-violet-600"></div>
+                        <span class="text-xs font-bold text-violet-100">浪漫薰衣草</span>
+                    </button>
+                    <button onclick="changeTheme('ocean')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#08141E] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-sky-600"></div>
+                        <span class="text-xs font-bold text-sky-100">湛藍海洋</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 雲端同步設定 -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-4 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-cloud text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">Google Drive 雲端同步</h3>
+                </div>
+                
+                <p class="text-sm text-textDim leading-relaxed font-medium">
+                    將您的刷卡設定與紀錄加密同步至您私人的 Google 雲端硬碟。資料不會經由第三方伺服器，安全且具備高度隱私。
+                </p>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5 font-mono">Google Client ID</label>
+                        <input type="text" id="setting-client-id" placeholder="輸入您的 Google 憑證 Client ID" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-sm font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5 font-mono">Google API Key</label>
+                        <input type="password" id="setting-api-key" placeholder="輸入您的 Google API 金鑰" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-sm font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="saveSyncSettings()" class="flex-1 py-3 rounded-xl bg-accentPrimary text-white text-sm font-bold hover:bg-blue-600 transition shadow-md">
+                        儲存金鑰並連結
+                    </button>
+                    <button id="google-sync-btn" onclick="syncWithGoogle()" class="px-5 py-3 rounded-xl bg-bgMain border border-borderMain text-textDim text-sm font-bold hover:bg-bgCard transition flex items-center gap-2" disabled>
+                        <i class="fa-solid fa-sync"></i> 立即同步
+                    </button>
+                </div>
+            </div>
+
+            <!-- 自訂消費管道設定 -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-3 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-wallet text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">自訂「其他」消費方式</h3>
+                </div>
+                <p class="text-sm text-textDim font-medium">當您選擇其他消費方式時，會自動帶入此設定的名稱：</p>
+                <input type="text" id="setting-other-pay-name" placeholder="例如：美團支付、WeChat Pay" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-sm text-textMain focus:outline-none focus:border-accentPrimary">
+            </div>
+
+            <!-- 資料備份與清除 (最純粹的 JSON 手動匯出入) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-3 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-file-export text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">手動本機資料備份</h3>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="exportData()" class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-download"></i> 匯出 JSON
+                    </button>
+                    <label class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer text-center shadow-sm">
+                        <i class="fa-solid fa-upload"></i> 匯入 JSON
+                        <input type="file" id="import-file-input" onchange="importData(event)" class="hidden" accept=".json">
+                    </label>
+                </div>
+                <button onclick="confirmClearData()" class="w-full py-3 rounded-xl bg-red-950/40 border border-red-900/40 text-red-400 text-sm font-bold hover:bg-red-900/30 transition">
+                    清除本機所有資料
+                </button>
+            </div>
+            
+            <div class="text-center text-xs text-textDim font-mono">
+                CardControl Version 1.1.0 (PWA Optimized)
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部固定選單列 -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-bgCard/90 backdrop-blur-md border-t border-borderMain px-2 py-2 flex justify-around items-center z-40 pb-safe shadow-lg">
+        <button id="nav-dashboard" onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1.5 text-accentPrimary transition-colors w-16">
+            <i class="fa-solid fa-chart-simple text-xl"></i>
+            <span class="text-xs font-bold">總覽</span>
+        </button>
+        <button id="nav-cards" onclick="switchTab('cards')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-credit-card text-xl"></i>
+            <span class="text-xs font-bold">卡片</span>
+        </button>
+        <button id="nav-records" onclick="switchTab('records')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-list-ul text-xl"></i>
+            <span class="text-xs font-bold">明細</span>
+        </button>
+        <button id="nav-charts" onclick="switchTab('charts')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-chart-pie text-xl"></i>
+            <span class="text-xs font-bold">分析</span>
+        </button>
+        <button id="nav-settings" onclick="switchTab('settings')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-gear text-xl"></i>
+            <span class="text-xs font-bold">設定</span>
+        </button>
+    </nav>
+
+    <!-- =================================彈出模態視窗組 (Modals)================================= -->
+
+    <!-- 新增/編輯信用卡 Modal -->
+    <div id="modal-card" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-bgCard border border-borderMain rounded-3xl w-full max-w-md overflow-hidden animate-slide-up shadow-2xl">
+            <div class="px-6 py-4 border-b border-borderMain flex justify-between items-center">
+                <h3 id="card-modal-title" class="text-lg font-bold text-textMain">新增信用卡</h3>
+                <button onclick="closeCardModal()" class="text-textDim hover:text-textMain"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="card-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">銀行名稱</label>
+                        <input type="text" id="card-bank" placeholder="例如：國泰世華" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">卡片名稱</label>
+                        <input type="text" id="card-name" placeholder="例如：CUBE卡" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">卡號後四碼</label>
+                        <input type="text" id="card-last-four" maxlength="4" placeholder="1234" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">卡片到期日 (MM/YY)</label>
+                        <input type="text" id="card-expiry" placeholder="12/29" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">結帳週期類型</label>
+                        <select id="card-billing-type" onchange="toggleBillingDayField()" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                            <option value="calendar">整個月曆月 (1-31日)</option>
+                            <option value="billingDate">依帳單月結日</option>
+                        </select>
+                    </div>
+                    <div id="card-billing-day-wrapper" class="hidden">
+                        <label class="block text-sm font-bold text-textDim mb-1.5">帳單結帳日</label>
+                        <input type="number" id="card-billing-day" min="1" max="31" placeholder="每月的幾號" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-textDim mb-1.5 flex justify-between">
+                        <span>建議消費上限 (NT$)</span>
+                        <span class="text-xs text-accentPrimary">最高回饋臨界金額</span>
+                    </label>
+                    <input type="number" id="card-recommended-limit" placeholder="例如：10000" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-textDim mb-2.5">卡面外觀配色</label>
+                    <div class="flex gap-2 justify-between">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-gold" class="peer hidden" checked>
+                            <div class="w-9 h-9 rounded-full card-gold border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-blue" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-blue border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-purple" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-purple border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-green" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-green border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-rose" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-rose border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-dark" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-dark border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button onclick="closeCardModal()" class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-base font-bold transition">取消</button>
+                    <button onclick="saveCard()" class="flex-1 py-3 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-base font-bold transition shadow-md">儲存卡片</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/編輯消費紀錄 Modal -->
+    <div id="modal-record" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-bgCard border border-borderMain rounded-3xl w-full max-w-md overflow-hidden animate-slide-up shadow-2xl">
+            <div class="px-6 py-4 border-b border-borderMain flex justify-between items-center">
+                <h3 id="record-modal-title" class="text-lg font-bold text-textMain">記錄一筆刷卡</h3>
+                <button onclick="closeRecordModal()" class="text-textDim hover:text-textMain"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[85vh] overflow-y-auto no-scrollbar">
+                <input type="hidden" id="record-id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">選擇卡片</label>
+                        <select id="record-card" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                            <!-- 動態載入卡片清單 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費金額 (NT$)</label>
+                        <input type="number" id="record-amount" placeholder="金額" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費日期</label>
+                        <input type="date" id="record-date" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費時間</label>
+                        <input type="time" id="record-time" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費通路 / 商家</label>
+                        <input type="text" id="record-channel" placeholder="例如：7-11、新光三越" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">品項說明 / 備註</label>
+                        <input type="text" id="record-item" placeholder="例如：午餐、咖啡" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-textDim mb-1.5">消費支付方式</label>
+                    <select id="record-pay-method" onchange="togglePayMethodOtherField()" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                        <option value="實體卡">實體卡</option>
+                        <option value="網路刷卡">網路刷卡</option>
+                        <option value="Samsung Pay">Samsung Pay</option>
+                        <option value="Google Pay">Google Pay</option>
+                        <option value="Line Pay">Line Pay</option>
+                        <option value="街口支付">街口支付</option>
+                        <option value="全支付">全支付</option>
+                        <option value="台灣Pay">台灣Pay</option>
+                        <option value="iPass Money">iPass Money</option>
+                        <option value="Hami Pay">Hami Pay</option>
+                        <option value="全盈+PAY">全盈+PAY</option>
+                        <option value="Pi拍錢包">Pi錢包</option>
+                        <option value="悠遊付">悠遊付</option>
+                        <option value="icash Pay">icash Pay</option>
+                        <option value="其他">其他 (可於下方自訂名稱)</option>
+                    </select>
+                </div>
+
+                <div id="record-pay-other-wrapper" class="hidden">
+                    <label class="block text-sm font-bold text-textDim mb-1.5">自訂「其他」支付名稱</label>
+                    <input type="text" id="record-pay-other" placeholder="自訂之支付名稱" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button onclick="closeRecordModal()" class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-base font-bold transition">取消</button>
+                    <button onclick="saveRecord()" class="flex-1 py-3 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-base font-bold transition shadow-md">儲存紀錄</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂提示對話視窗 (Toast/Alert) -->
+    <div id="toast-container" class="fixed bottom-24 left-4 right-4 z-50 pointer-events-none flex flex-col items-center gap-2">
+        <!-- 訊息會動態生成並消失 -->
+    </div>
+
+    <!-- 確認對話框 (Custom Confirm) -->
+    <div id="modal-confirm" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-bgCard border border-borderMain rounded-3xl w-full max-w-sm overflow-hidden p-6 shadow-2xl space-y-4">
+            <h3 id="confirm-title" class="text-base font-bold text-textMain">確定執行此操作？</h3>
+            <p id="confirm-msg" class="text-sm text-textDim leading-relaxed font-medium"></p>
+            <div class="flex gap-2">
+                <button id="confirm-cancel" class="flex-1 py-2.5 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition">取消</button>
+                <button id="confirm-ok" class="flex-1 py-2.5 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-sm font-bold transition">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================JavaScript 核心程式碼================================= -->
+    <script>
+        // --- 核心資料狀態管理 ---
+        let cards = [];
+        let records = [];
+        let currentTab = 'dashboard';
+        let currentRecordCardFilter = 'all';
+
+        // Google Drive API 參數
+        let isGoogleAuthInitialized = false;
+        let googleTokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let googleAccessToken = null;
+
+        // 圖表物件參照
+        let payMethodChartInstance = null;
+        let trendLineChartInstance = null;
+        let cardUsageChartInstance = null;
+
+        // 預設資料初始化
+        const defaultData = {
+            cards: [
+                { id: 'card-1', bank: '國泰世華', name: 'CUBE 卡', lastFour: '8839', expiry: '12/28', billingCycleType: 'calendar', billingDay: 1, recommendedLimit: 20000, color: 'card-rose' },
+                { id: 'card-2', bank: '台新銀行', name: '玫瑰 Giving 卡', lastFour: '5201', expiry: '06/29', billingCycleType: 'billingDate', billingDay: 15, recommendedLimit: 15000, color: 'card-gold' },
+                { id: 'card-3', bank: '富邦銀行', name: 'J卡', lastFour: '9012', expiry: '09/27', billingCycleType: 'calendar', billingDay: 1, recommendedLimit: 10000, color: 'card-blue' }
+            ],
+            records: [
+                { id: 'r-1', cardId: 'card-1', date: getRelativeDate(0), time: '12:30', channel: '7-11便利商店', item: '經典拿鐵與御飯糰', amount: 95, payMethod: 'Line Pay', payMethodOther: '' },
+                { id: 'r-2', cardId: 'card-2', date: getRelativeDate(-2), time: '19:45', channel: '新光三越', item: '春季外套', amount: 3200, payMethod: '實體卡', payMethodOther: '' },
+                { id: 'r-3', cardId: 'card-3', date: getRelativeDate(-5), time: '15:10', channel: '星巴克', item: '特大杯美式', amount: 135, payMethod: 'Google Pay', payMethodOther: '' },
+                { id: 'r-4', cardId: 'card-1', date: getRelativeDate(-12), time: '21:00', channel: 'Uber Eats', item: '晚餐外送', amount: 450, payMethod: '網路刷卡', payMethodOther: '' }
+            ]
+        };
+
+        // 輔助函式：取得今日或相對日期字串 YYYY-MM-DD
+        function getRelativeDate(daysOffset) {
+            const date = new Date();
+            date.setDate(date.getDate() + daysOffset);
+            return date.toISOString().split('T')[0];
+        }
+
+        // --- 載入本機與雲端設定資料 ---
+        window.onload = function() {
+            // 載入主題，預設修改為 'light' (極地純白)
+            const savedTheme = localStorage.getItem('cc_theme') || 'light';
+            changeTheme(savedTheme, false);
+
+            // 從 LocalStorage 載入資料
+            const storedCards = localStorage.getItem('cc_cards');
+            const storedRecords = localStorage.getItem('cc_records');
+            const storedOtherPay = localStorage.getItem('cc_other_pay');
+            
+            // 雲端同步設定載入
+            const storedClientId = localStorage.getItem('cc_google_client_id');
+            const storedApiKey = localStorage.getItem('cc_google_api_key');
+            
+            if (storedCards && storedRecords) {
+                cards = JSON.parse(storedCards);
+                records = JSON.parse(storedRecords);
+            } else {
+                cards = defaultData.cards;
+                records = defaultData.records;
+                saveToLocal();
+            }
+
+            if (storedOtherPay) {
+                document.getElementById('setting-other-pay-name').value = storedOtherPay;
+            } else {
+                document.getElementById('setting-other-pay-name').value = '街口支付'; // 預設自訂
+            }
+
+            if (storedClientId) document.getElementById('setting-client-id').value = storedClientId;
+            if (storedApiKey) document.getElementById('setting-api-key').value = storedApiKey;
+
+            // 初始畫面渲染
+            initApp();
+            
+            // 延遲載入 Google Drive SDK
+            setTimeout(() => {
+                try {
+                    gapiLoad();
+                    gisLoad();
+                } catch(e) {
+                    console.log("Google Drive 模組載入失敗，採用本機儲存模式。");
+                }
+            }, 1000);
+        };
+
+        function saveToLocal() {
+            localStorage.setItem('cc_cards', JSON.stringify(cards));
+            localStorage.setItem('cc_records', JSON.stringify(records));
+            localStorage.setItem('cc_other_pay', document.getElementById('setting-other-pay-name').value);
+        }
+
+        function initApp() {
+            renderDashboard();
+            renderCardsList();
+            renderRecordsList();
+            updateCharts();
+            populateCardSelectDropdowns();
+        }
+
+        // --- 視圖切換 Tab Switching ---
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // 切換視圖區顯示狀態
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+
+            // 調整底部導覽列樣式
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('text-accentPrimary');
+                btn.classList.add('text-textDim');
+            });
+            document.getElementById(`nav-${tabName}`).classList.remove('text-textDim');
+            document.getElementById(`nav-${tabName}`).classList.add('text-accentPrimary');
+
+            // 觸發重新繪製與資料重算
+            if (tabName === 'dashboard') {
+                renderDashboard();
+            } else if (tabName === 'records') {
+                renderRecordsList();
+            } else if (tabName === 'charts') {
+                setTimeout(() => { updateCharts(); }, 150);
+            }
+        }
+
+        // --- 客製化主題切換 ---
+        function changeTheme(themeName, save = true) {
+            document.body.setAttribute('data-theme', themeName);
+            if (save) {
+                localStorage.setItem('cc_theme', themeName);
+                showToast(`已切換至 ${getThemeNameDisplay(themeName)} 主題`, 'success');
+            }
+            
+            // 同步更新 Chart.js 顏色配置並重畫
+            updateChartColorsForTheme();
+        }
+
+        function getThemeNameDisplay(id) {
+            const names = { 'dark': '深邃午夜', 'light': '極地純白', 'forest': '翡翠森林', 'lavender': '浪漫薰衣草', 'ocean': '湛藍海洋' };
+            return names[id] || id;
+        }
+
+        function updateChartColorsForTheme() {
+            const style = getComputedStyle(document.body);
+            const textColor = style.getPropertyValue('--text-dim').trim();
+            const borderColor = style.getPropertyValue('--border-main').trim();
+            
+            if (typeof Chart !== 'undefined') {
+                Chart.defaults.color = textColor;
+                Chart.defaults.borderColor = borderColor;
+            }
+            
+            if (currentTab === 'charts') {
+                updateCharts();
+            }
+        }
+
+        // --- 客製化 Toast 訊息 (取代 Alert) ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let iconClass = 'fa-info-circle text-blue-500';
+            let borderClass = 'border-blue-900/50';
+            if (type === 'success') {
+                iconClass = 'fa-circle-check text-green-500';
+                borderClass = 'border-green-900/50';
+            } else if (type === 'error') {
+                iconClass = 'fa-circle-exclamation text-red-500';
+                borderClass = 'border-red-900/50';
+            } else if (type === 'warn') {
+                iconClass = 'fa-triangle-exclamation text-amber-500';
+                borderClass = 'border-amber-900/50';
+            }
+
+            toast.className = `flex items-center space-x-3 bg-bgCard/95 border ${borderClass} px-5 py-4 rounded-2xl shadow-xl w-full max-w-sm pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} text-lg flex-shrink-0"></i>
+                <span class="text-sm font-bold text-textMain flex-1 leading-relaxed">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-10px]', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // --- 客製化確認框 (取代 Confirm) ---
+        function showConfirm(title, message, onOk) {
+            const modal = document.getElementById('modal-confirm');
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-msg').innerText = message;
+            
+            modal.classList.remove('hidden');
+            
+            document.getElementById('confirm-ok').onclick = function() {
+                onOk();
+                modal.classList.add('hidden');
+            };
+            document.getElementById('confirm-cancel').onclick = function() {
+                modal.classList.add('hidden');
+            };
+        }
+
+        // --- 計算卡片在特定期間的消費總額 ---
+        function calculateCardSpent(card, mode = 'billing') {
+            let total = 0;
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            
+            let startDate, endDate;
+
+            if (mode === 'calendar' || card.billingCycleType === 'calendar') {
+                startDate = new Date(currentYear, currentMonth, 1);
+                endDate = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+            } else {
+                const billDay = parseInt(card.billingDay);
+                const currentDay = now.getDate();
+
+                if (currentDay >= billDay) {
+                    startDate = new Date(currentYear, currentMonth, billDay);
+                    endDate = new Date(currentYear, currentMonth + 1, billDay - 1, 23, 59, 59);
+                } else {
+                    startDate = new Date(currentYear, currentMonth - 1, billDay);
+                    endDate = new Date(currentYear, currentMonth, billDay - 1, 23, 59, 59);
+                }
+            }
+
+            records.forEach(r => {
+                if (r.cardId === card.id) {
+                    const rDate = new Date(r.date);
+                    if (rDate >= startDate && rDate <= endDate) {
+                        total += parseFloat(r.amount || 0);
+                    }
+                }
+            });
+
+            return {
+                total,
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0]
+            };
+        }
+
+        // ================================= A: 儀表板視覺渲染 =================================
+        function renderDashboard() {
+            const container = document.getElementById('dashboard-cards-container');
+            const limitsContainer = document.getElementById('rewards-limit-container');
+            
+            container.innerHTML = '';
+            limitsContainer.innerHTML = '';
+
+            if (cards.length === 0) {
+                container.innerHTML = `
+                    <div onclick="switchTab('cards')" class="w-full bg-bgCard border-2 border-dashed border-borderMain rounded-3xl p-6 text-center text-textDim cursor-pointer py-10 flex flex-col items-center justify-center space-y-2">
+                        <i class="fa-solid fa-credit-card text-4xl"></i>
+                        <span class="text-sm font-bold text-textDim">目前沒有登錄信用卡，點擊新增</span>
+                    </div>
+                `;
+                limitsContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">請先至「卡片」頁面新增卡片</p>`;
+                return;
+            }
+
+            // 1. 渲染頂部精緻信用卡 Carousel (調整字型大小，避免溢出並優化排版)
+            cards.forEach(card => {
+                const calc = calculateCardSpent(card, 'billing');
+                const recommend = parseFloat(card.recommendedLimit || 0);
+                const pct = recommend > 0 ? Math.min((calc.total / recommend) * 100, 100) : 0;
+                
+                let glowColor = 'bg-accentPrimary shadow-blue-500/20';
+                if (pct >= 90 && pct < 100) glowColor = 'bg-amber-500 shadow-amber-500/30';
+                else if (pct >= 100) glowColor = 'bg-red-500 shadow-red-500/40';
+
+                const cardEl = document.createElement('div');
+                cardEl.className = `flex-none w-72 h-44 rounded-2xl ${card.color} p-4 flex flex-col justify-between shadow-2xl relative overflow-hidden snap-center select-none`;
+                cardEl.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="space-y-1">
+                            <span class="text-xs uppercase font-black tracking-widest text-white/80">${card.bank}</span>
+                            <h4 class="text-lg font-black text-white leading-tight">${card.name}</h4>
+                        </div>
+                        <div class="w-10 h-8 rounded bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white text-xs font-black italic">
+                            VISA
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <span class="text-xs text-white/60 block font-mono font-bold">CARD NUMBER</span>
+                            <span class="text-base font-mono font-bold tracking-wider text-white">••••  ••••  ••••  ${card.lastFour}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-white/60 block font-mono font-bold">EXPIRY</span>
+                            <span class="text-sm font-mono font-bold text-white">${card.expiry}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(cardEl);
+
+                // 2. 建立額度極大化進度視窗
+                const limitCard = document.createElement('div');
+                limitCard.className = "space-y-2";
+                
+                let statusBadge = `<span class="text-xs bg-blue-900/50 text-blue-400 px-2.5 py-1 rounded-full font-bold">刷卡中</span>`;
+                if (pct >= 90 && pct < 100) {
+                    statusBadge = `<span class="text-xs bg-amber-950 text-amber-500 px-2.5 py-1 rounded-full font-bold">接近上限</span>`;
+                } else if (pct >= 100) {
+                    statusBadge = `<span class="text-xs bg-red-950 text-red-500 px-2.5 py-1 rounded-full font-bold">已達回饋上限 (請換卡)</span>`;
+                }
+
+                limitCard.innerHTML = `
+                    <div class="flex justify-between items-center text-sm font-bold">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-extrabold text-textMain text-base">${card.name}</span>
+                            <span class="text-xs font-mono text-textDim font-bold">(${card.lastFour})</span>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    
+                    <div class="w-full bg-bgMain rounded-full h-3.5 overflow-hidden border border-borderMain">
+                        <div class="h-full rounded-full transition-all duration-500 ${glowColor}" style="width: ${pct}%"></div>
+                    </div>
+                    
+                    <div class="flex justify-between text-xs font-mono text-textDim font-bold">
+                        <span>已刷 NT$ ${calc.total.toLocaleString()}</span>
+                        <span>回饋上限 NT$ ${recommend.toLocaleString()}</span>
+                    </div>
+                `;
+                limitsContainer.innerHTML += `
+                    <div class="p-4 bg-bgMain/40 rounded-xl border border-borderMain space-y-2">
+                        ${limitCard.innerHTML}
+                    </div>
+                `;
+            });
+
+            // 3. 計算並更新當月(日曆月)總消費
+            let calendarTotalSum = 0;
+            cards.forEach(card => {
+                const calc = calculateCardSpent(card, 'calendar');
+                calendarTotalSum += calc.total;
+            });
+            document.getElementById('calendar-total').innerText = `NT$ ${calendarTotalSum.toLocaleString()}`;
+
+            // 4. 計算並更新最常使用的刷卡支付管道
+            const payCounts = {};
+            records.forEach(r => {
+                const method = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+                payCounts[method] = (payCounts[method] || 0) + 1;
+            });
+            let topPay = '無紀錄';
+            let topCount = 0;
+            for (const [key, val] of Object.entries(payCounts)) {
+                if (val > topCount) {
+                    topCount = val;
+                    topPay = key;
+                }
+            }
+            document.getElementById('top-pay-method').innerText = topPay;
+            document.getElementById('top-pay-count').innerText = `本月消費 ${topCount} 次`;
+
+            // 5. 渲染最近 3 筆消費紀錄 (放大字型至 14px / 12px)
+            const recentContainer = document.getElementById('dashboard-recent-records');
+            recentContainer.innerHTML = '';
+            
+            const sortedRecords = [...records].sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time)).slice(0, 3);
+            
+            if (sortedRecords.length === 0) {
+                recentContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">目前尚無任何刷卡消費紀錄</p>`;
+                return;
+            }
+
+            sortedRecords.forEach(r => {
+                const card = cards.find(c => c.id === r.cardId) || { name: '未知卡片', lastFour: 'xxxx' };
+                const displayPayMethod = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+                
+                recentContainer.innerHTML += `
+                    <div class="flex items-center justify-between p-4 rounded-xl bg-bgMain/40 hover:bg-bgCard/60 border border-borderMain transition shadow-sm">
+                        <div class="flex items-center space-x-3.5 min-w-0">
+                            <div class="w-10 h-10 rounded-full bg-accentPrimary/10 flex items-center justify-center flex-shrink-0 text-accentPrimary">
+                                <i class="fa-solid fa-shopping-bag text-base"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="text-sm font-bold text-textMain truncate">${r.channel}</h4>
+                                <p class="text-xs text-textDim font-semibold flex items-center gap-1.5 mt-1">
+                                    <span class="truncate">${card.name} (${card.lastFour})</span>
+                                    <span>•</span>
+                                    <span>${displayPayMethod}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0 pl-2">
+                            <span class="text-base font-bold font-mono text-textMain">NT$ ${parseFloat(r.amount).toLocaleString()}</span>
+                            <span class="block text-xs text-textDim font-mono font-semibold mt-1">${r.date}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // ================================= B: 信用卡管理模組 =================================
+        function renderCardsList() {
+            const container = document.getElementById('cards-list-container');
+            container.innerHTML = '';
+
+            if (cards.length === 0) {
+                container.innerHTML = `
+                    <div onclick="openCardModal()" class="w-full bg-bgCard border-2 border-dashed border-borderMain rounded-3xl p-6 text-center text-textDim cursor-pointer py-12 flex flex-col items-center justify-center space-y-3 shadow-sm">
+                        <i class="fa-solid fa-credit-card text-5xl text-textDim"></i>
+                        <div>
+                            <p class="text-base font-bold text-textMain">尚未新增任何信用卡</p>
+                            <p class="text-sm text-textDim mt-1 font-medium">立刻建立您的首張信用卡以管理回饋與額度</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            cards.forEach(card => {
+                const calc = calculateCardSpent(card, 'billing');
+                const recommend = parseFloat(card.recommendedLimit || 0);
+                const pct = recommend > 0 ? Math.min((calc.total / recommend) * 100, 100) : 0;
+                
+                container.innerHTML += `
+                    <div class="bg-bgCard border border-borderMain rounded-3xl overflow-hidden shadow-xl">
+                        <div class="p-5 ${card.color} flex justify-between items-center text-white">
+                            <div>
+                                <span class="text-xs uppercase font-black tracking-widest text-white/80">${card.bank}</span>
+                                <h3 class="text-lg font-black leading-tight">${card.name}</h3>
+                                <p class="text-sm font-mono font-bold tracking-wider mt-1.5">•••• ${card.lastFour}</p>
+                            </div>
+                            <div class="flex space-x-2.5">
+                                <button onclick="openCardModal('${card.id}')" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition"><i class="fa-solid fa-pen text-sm"></i></button>
+                                <button onclick="deleteCard('${card.id}')" class="w-9 h-9 rounded-full bg-white/20 hover:bg-red-500/30 flex items-center justify-center transition"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                            </div>
+                        </div>
+                        <div class="p-5 bg-bgMain/20 space-y-4">
+                            <div class="grid grid-cols-2 gap-4 text-sm font-bold">
+                                <div>
+                                    <span class="text-textDim block text-xs font-semibold mb-1">結帳期制度</span>
+                                    <span class="text-textMain">${card.billingCycleType === 'calendar' ? '整個月曆月 (1~31日)' : `每月 ${card.billingDay} 號結帳`}</span>
+                                </div>
+                                <div>
+                                    <span class="text-textDim block text-xs font-semibold mb-1">有效期限</span>
+                                    <span class="text-textMain font-mono">${card.expiry}</span>
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-borderMain">
+                                <div class="flex justify-between text-sm mb-2 font-bold">
+                                    <span class="text-textDim">當期帳單累積消費</span>
+                                    <span class="font-mono text-textMain">NT$ ${calc.total.toLocaleString()} / NT$ ${recommend.toLocaleString()}</span>
+                                </div>
+                                <div class="w-full bg-bgMain rounded-full h-2.5">
+                                    <div class="bg-accentPrimary h-full rounded-full" style="width: ${pct}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // 彈出新增/編輯卡片視窗
+        function openCardModal(cardId = '') {
+            const modal = document.getElementById('modal-card');
+            const title = document.getElementById('card-modal-title');
+            
+            document.getElementById('card-id').value = '';
+            document.getElementById('card-bank').value = '';
+            document.getElementById('card-name').value = '';
+            document.getElementById('card-last-four').value = '';
+            document.getElementById('card-expiry').value = '';
+            document.getElementById('card-billing-type').value = 'calendar';
+            document.getElementById('card-billing-day').value = '';
+            document.getElementById('card-recommended-limit').value = '';
+            
+            toggleBillingDayField();
+
+            if (cardId) {
+                title.innerText = '編輯信用卡';
+                const card = cards.find(c => c.id === cardId);
+                if (card) {
+                    document.getElementById('card-id').value = card.id;
+                    document.getElementById('card-bank').value = card.bank;
+                    document.getElementById('card-name').value = card.name;
+                    document.getElementById('card-last-four').value = card.lastFour;
+                    document.getElementById('card-expiry').value = card.expiry;
+                    document.getElementById('card-billing-type').value = card.billingCycleType;
+                    document.getElementById('card-billing-day').value = card.billingDay || '';
+                    document.getElementById('card-recommended-limit').value = card.recommendedLimit;
+                    
+                    const colorRadios = document.querySelectorAll('input[name="card-color"]');
+                    colorRadios.forEach(radio => {
+                        if (radio.value === card.color) radio.checked = true;
+                    });
+                    
+                    toggleBillingDayField();
+                }
+            } else {
+                title.innerText = '新增信用卡';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeCardModal() {
+            document.getElementById('modal-card').classList.add('hidden');
+        }
+
+        function toggleBillingDayField() {
+            const type = document.getElementById('card-billing-type').value;
+            const wrapper = document.getElementById('card-billing-day-wrapper');
+            if (type === 'billingDate') {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        // 儲存卡片資訊
+        function saveCard() {
+            const id = document.getElementById('card-id').value;
+            const bank = document.getElementById('card-bank').value.trim();
+            const name = document.getElementById('card-name').value.trim();
+            const lastFour = document.getElementById('card-last-four').value.trim();
+            const expiry = document.getElementById('card-expiry').value.trim();
+            const billingCycleType = document.getElementById('card-billing-type').value;
+            const billingDay = document.getElementById('card-billing-day').value;
+            const recommendedLimit = document.getElementById('card-recommended-limit').value;
+            const color = document.querySelector('input[name="card-color"]:checked').value;
+
+            if (!bank || !name || lastFour.length !== 4 || !expiry || !recommendedLimit) {
+                showToast('請完整填寫必填欄位 (卡號須為 4 碼)', 'warn');
+                return;
+            }
+            if (billingCycleType === 'billingDate' && (!billingDay || billingDay < 1 || billingDay > 31)) {
+                showToast('請填寫有效的帳單結帳日 (1 ~ 31日)', 'warn');
+                return;
+            }
+
+            const cardData = {
+                id: id || 'card-' + Date.now(),
+                bank,
+                name,
+                lastFour,
+                expiry,
+                billingCycleType,
+                billingDay: billingCycleType === 'billingDate' ? parseInt(billingDay) : 1,
+                recommendedLimit: parseFloat(recommendedLimit),
+                color
+            };
+
+            if (id) {
+                const index = cards.findIndex(c => c.id === id);
+                if (index !== -1) cards[index] = cardData;
+                showToast('卡片編輯完成！', 'success');
+            } else {
+                cards.push(cardData);
+                showToast('全新信用卡新增成功！', 'success');
+            }
+
+            saveToLocal();
+            closeCardModal();
+            initApp();
+        }
+
+        function deleteCard(cardId) {
+            const card = cards.find(c => c.id === cardId);
+            if (!card) return;
+
+            showConfirm(
+                '刪除卡片',
+                `確定要刪除「${card.name} (${card.lastFour})」嗎？這會連同其所屬之消費刷卡明細一同清除。`,
+                () => {
+                    cards = cards.filter(c => c.id !== cardId);
+                    records = records.filter(r => r.cardId !== cardId);
+                    saveToLocal();
+                    showToast('卡片及關聯消費已成功移除', 'success');
+                    initApp();
+                }
+            );
+        }
+
+        // ================================= C: 刷卡明細管理 =================================
+        function populateCardSelectDropdowns() {
+            const dropdown = document.getElementById('record-card');
+            dropdown.innerHTML = '';
+            
+            cards.forEach(card => {
+                dropdown.innerHTML += `<option value="${card.id}">${card.bank} - ${card.name} (${card.lastFour})</option>`;
+            });
+        }
+
+        function renderRecordsList() {
+            const container = document.getElementById('records-list-container');
+            const filterContainer = document.getElementById('record-card-filter-container');
+            const periodMode = document.getElementById('record-period-filter').value;
+            
+            const activeClass = "bg-accentPrimary text-white border-transparent shadow-sm";
+            const inactiveClass = "bg-bgCard text-textDim border-borderMain hover:bg-bgMain";
+            
+            let filterHtml = `
+                <button onclick="filterRecordsByCard('all')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === 'all' ? activeClass : inactiveClass}">
+                    全部卡片
+                </button>
+            `;
+            cards.forEach(card => {
+                filterHtml += `
+                    <button onclick="filterRecordsByCard('${card.id}')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === card.id ? activeClass : inactiveClass}">
+                        ${card.name}
+                    </button>
+                `;
+            });
+            filterContainer.innerHTML = filterHtml;
+
+            container.innerHTML = '';
+            let filtered = [...records];
+
+            if (currentRecordCardFilter !== 'all') {
+                filtered = filtered.filter(r => r.cardId === currentRecordCardFilter);
+            }
+
+            if (periodMode === 'calendar') {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const start = new Date(year, month, 1);
+                const end = new Date(year, month + 1, 0, 23, 59, 59);
+                filtered = filtered.filter(r => {
+                    const d = new Date(r.date);
+                    return d >= start && d <= end;
+                });
+            } else if (periodMode === 'billing') {
+                filtered = filtered.filter(r => {
+                    const card = cards.find(c => c.id === r.cardId);
+                    if (!card) return false;
+                    const calc = calculateCardSpent(card, 'billing');
+                    return r.date >= calc.startDate && r.date <= calc.endDate;
+                });
+            }
+
+            filtered.sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-bgCard border border-borderMain rounded-3xl text-textDim space-y-2 shadow-sm">
+                        <i class="fa-solid fa-list-check text-4xl"></i>
+                        <p class="text-sm font-bold">在此區間下沒有找到任何消費紀錄</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(r => {
+                const card = cards.find(c => c.id === r.cardId) || { name: '未知卡片', lastFour: 'xxxx', color: 'card-dark' };
+                const displayPayMethod = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+
+                container.innerHTML += `
+                    <div class="bg-bgCard border border-borderMain rounded-2xl p-4.5 flex justify-between items-center hover:border-textDim/20 transition shadow-sm">
+                        <div class="flex items-center space-x-3.5 min-w-0">
+                            <div class="w-3 h-12 rounded-full ${card.color} flex-shrink-0"></div>
+                            
+                            <div class="min-w-0 space-y-1">
+                                <h4 class="text-base font-bold text-textMain truncate leading-tight">${r.channel}</h4>
+                                <div class="flex items-center space-x-2 text-xs text-textDim font-bold">
+                                    <span class="truncate">${card.name}</span>
+                                    <span>•</span>
+                                    <span class="truncate">${displayPayMethod}</span>
+                                </div>
+                                ${r.item ? `<p class="text-sm text-textDim font-semibold truncate bg-bgMain/40 px-2 py-0.5 rounded">${r.item}</p>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3.5 flex-shrink-0 pl-2">
+                            <div class="text-right">
+                                <span class="text-base font-bold font-mono text-textMain block">NT$ ${parseFloat(r.amount).toLocaleString()}</span>
+                                <span class="text-xs text-textDim font-mono font-bold block mt-0.5">${r.date} ${r.time}</span>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="openAddRecordModal('${r.id}')" class="text-textDim hover:text-textMain transition p-1 text-sm"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteRecord('${r.id}')" class="text-textDim hover:text-red-500 transition p-1 text-sm"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterRecordsByCard(cardId) {
+            currentRecordCardFilter = cardId;
+            renderRecordsList();
+        }
+
+        function openAddRecordModal(recordId = '') {
+            if (cards.length === 0) {
+                showToast('請先新增最少一張信用卡！', 'warn');
+                switchTab('cards');
+                return;
+            }
+
+            const modal = document.getElementById('modal-record');
+            const title = document.getElementById('record-modal-title');
+            
+            document.getElementById('record-id').value = '';
+            document.getElementById('record-amount').value = '';
+            document.getElementById('record-channel').value = '';
+            document.getElementById('record-item').value = '';
+            document.getElementById('record-pay-method').value = '實體卡';
+            document.getElementById('record-pay-other').value = '';
+            
+            const now = new Date();
+            document.getElementById('record-date').value = now.toISOString().split('T')[0];
+            document.getElementById('record-time').value = now.toTimeString().substring(0, 5);
+            
+            populateCardSelectDropdowns();
+            togglePayMethodOtherField();
+
+            if (recordId) {
+                title.innerText = '編輯刷卡紀錄';
+                const r = records.find(item => item.id === recordId);
+                if (r) {
+                    document.getElementById('record-id').value = r.id;
+                    document.getElementById('record-card').value = r.cardId;
+                    document.getElementById('record-amount').value = r.amount;
+                    document.getElementById('record-date').value = r.date;
+                    document.getElementById('record-time').value = r.time;
+                    document.getElementById('record-channel').value = r.channel;
+                    document.getElementById('record-item').value = r.item;
+                    document.getElementById('record-pay-method').value = r.payMethod;
+                    document.getElementById('record-pay-other').value = r.payMethodOther || '';
+                    
+                    togglePayMethodOtherField();
+                }
+            } else {
+                title.innerText = '記錄一筆刷卡';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeRecordModal() {
+            document.getElementById('modal-record').classList.add('hidden');
+        }
+
+        function togglePayMethodOtherField() {
+            const method = document.getElementById('record-pay-method').value;
+            const wrapper = document.getElementById('record-pay-other-wrapper');
+            if (method === '其他') {
+                wrapper.classList.remove('hidden');
+                const defaultOther = localStorage.getItem('cc_other_pay') || '自訂支付';
+                document.getElementById('record-pay-other').value = defaultOther;
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        function saveRecord() {
+            const id = document.getElementById('record-id').value;
+            const cardId = document.getElementById('record-card').value;
+            const amount = document.getElementById('record-amount').value.trim();
+            const date = document.getElementById('record-date').value;
+            const time = document.getElementById('record-time').value;
+            const channel = document.getElementById('record-channel').value.trim();
+            const item = document.getElementById('record-item').value.trim();
+            const payMethod = document.getElementById('record-pay-method').value;
+            const payMethodOther = document.getElementById('record-pay-other').value.trim();
+
+            if (!cardId || !amount || !date || !time || !channel) {
+                showToast('請完整填寫消費金額、日期與通路等必填欄位！', 'warn');
+                return;
+            }
+
+            const recordData = {
+                id: id || 'r-' + Date.now(),
+                cardId,
+                amount: parseFloat(amount),
+                date,
+                time,
+                channel,
+                item,
+                payMethod,
+                payMethodOther: payMethod === '其他' ? payMethodOther : ''
+            };
+
+            if (id) {
+                const index = records.findIndex(r => r.id === id);
+                if (index !== -1) records[index] = recordData;
+                showToast('刷卡消費紀錄編輯成功！', 'success');
+            } else {
+                records.push(recordData);
+                showToast('消費紀錄成功寫入！', 'success');
+            }
+
+            saveToLocal();
+            closeRecordModal();
+            initApp();
+            
+            if (localStorage.getItem('cc_google_sync_enabled') === 'true') {
+                syncWithGoogle(true);
+            }
+        }
+
+        function deleteRecord(recordId) {
+            showConfirm(
+                '刪除消費明細',
+                '確定要刪除此筆刷卡消費明細嗎？此操作不可還原。',
+                () => {
+                    records = records.filter(r => r.id !== recordId);
+                    saveToLocal();
+                    showToast('已刪除該消費明細', 'success');
+                    initApp();
+                }
+            );
+        }
+
+        // ================================= D: Chart.js 圖表分析 =================================
+        function updateCharts() {
+            if (cards.length === 0 || records.length === 0) return;
+
+            const timeFilter = document.getElementById('chart-time-filter').value;
+            let filtered = [...records];
+            
+            const now = new Date();
+            if (timeFilter === 'current-month') {
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const start = new Date(year, month, 1);
+                filtered = filtered.filter(r => new Date(r.date) >= start);
+            } else if (timeFilter === 'last-30') {
+                const start = new Date();
+                start.setDate(start.getDate() - 30);
+                filtered = filtered.filter(r => new Date(r.date) >= start);
+            }
+
+            // 1. 支付管道佔比數據
+            const payMethodsMap = {};
+            filtered.forEach(r => {
+                const method = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+                payMethodsMap[method] = (payMethodsMap[method] || 0) + parseFloat(r.amount);
+            });
+            const payLabels = Object.keys(payMethodsMap);
+            const payData = Object.values(payMethodsMap);
+
+            // 2. 趨勢累計數據
+            const trendMap = {};
+            for (let i = 14; i >= 0; i--) {
+                const dStr = getRelativeDate(-i);
+                trendMap[dStr] = 0;
+            }
+            filtered.forEach(r => {
+                if (trendMap[r.date] !== undefined) {
+                    trendMap[r.date] += parseFloat(r.amount);
+                }
+            });
+            const trendLabels = Object.keys(trendMap).map(d => d.substring(5));
+            let runningTotal = 0;
+            const trendData = Object.values(trendMap).map(val => {
+                runningTotal += val;
+                return runningTotal;
+            });
+
+            // 3. 各信用卡消費總額
+            const cardUsageMap = {};
+            cards.forEach(c => { cardUsageMap[c.name] = 0; });
+            filtered.forEach(r => {
+                const card = cards.find(c => c.id === r.cardId);
+                if (card) {
+                    cardUsageMap[card.name] = (cardUsageMap[card.name] || 0) + parseFloat(r.amount);
+                }
+            });
+            const cardLabels = Object.keys(cardUsageMap);
+            const cardData = Object.values(cardUsageMap);
+
+            if (payMethodChartInstance) payMethodChartInstance.destroy();
+            if (trendLineChartInstance) trendLineChartInstance.destroy();
+            if (cardUsageChartInstance) cardUsageChartInstance.destroy();
+
+            const style = getComputedStyle(document.body);
+            const textDimColor = style.getPropertyValue('--text-dim').trim();
+            const borderMainColor = style.getPropertyValue('--border-main').trim();
+
+            // A. Pie Chart
+            const ctx1 = document.getElementById('payMethodChart').getContext('2d');
+            payMethodChartInstance = new Chart(ctx1, {
+                type: 'pie',
+                data: {
+                    labels: payLabels,
+                    datasets: [{
+                        data: payData,
+                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E', '#6B7280'],
+                        borderWidth: 1,
+                        borderColor: borderMainColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: textDimColor, font: { size: 11, weight: 'bold' } } }
+                    }
+                }
+            });
+
+            // B. Line Chart
+            const ctx2 = document.getElementById('trendLineChart').getContext('2d');
+            trendLineChartInstance = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: '累計刷卡金額 (NT$)',
+                        data: trendData,
+                        borderColor: '#1D4ED8',
+                        backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 10, weight: 'bold' } } },
+                        y: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 10, weight: 'bold' } } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // C. Bar Chart
+            const ctx3 = document.getElementById('cardUsageChart').getContext('2d');
+            cardUsageChartInstance = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: cardLabels,
+                    datasets: [{
+                        data: cardData,
+                        backgroundColor: ['#EF4444', '#F59E0B', '#1D4ED8', '#10B981', '#8B5CF6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textDimColor, font: { size: 11, weight: 'bold' } } },
+                        y: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 11, weight: 'bold' } } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // ================================= E: 設定與雲端備份 =================================
+        function openSyncSettings() {
+            switchTab('settings');
+            document.getElementById('setting-client-id').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function saveSyncSettings() {
+            const clientId = document.getElementById('setting-client-id').value.trim();
+            const apiKey = document.getElementById('setting-api-key').value.trim();
+
+            if (!clientId || !apiKey) {
+                showToast('請正確填入您的 Google API Key 與 Client ID', 'warn');
+                return;
+            }
+
+            localStorage.setItem('cc_google_client_id', clientId);
+            localStorage.setItem('cc_google_api_key', apiKey);
+            localStorage.setItem('cc_google_sync_enabled', 'true');
+            
+            showToast('Google API 設定已儲存！請嘗試進行同步。', 'success');
+            document.getElementById('google-sync-btn').disabled = false;
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ cards, records }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `CardControl_Backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('本機設定檔備份 JSON 匯出成功！', 'success');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.cards && parsed.records) {
+                        cards = parsed.cards;
+                        records = parsed.records;
+                        saveToLocal();
+                        showToast('JSON 設定與消費數據已成功匯入！', 'success');
+                        initApp();
+                    } else {
+                        showToast('匯入失敗：JSON 結構不符預期格式', 'error');
+                    }
+                } catch(err) {
+                    showToast('檔案格式錯誤，無法正確解析。', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function confirmClearData() {
+            showConfirm(
+                '清除所有資料',
+                '這將永久清空所有在本機儲存的信用卡、帳單資訊及刷卡明細，請確保已做好備份。',
+                () => {
+                    localStorage.clear();
+                    cards = [];
+                    records = [];
+                    showToast('資料已完全清空！', 'success');
+                    initApp();
+                }
+            );
+        }
+
+        // ================================= Google Drive API 同步機制 =================================
+        function gapiLoad() {
+            gapi.load('client', () => {
+                gapiInited = true;
+                checkGisGapiInit();
+            });
+        }
+
+        function gisLoad() {
+            const storedClientId = localStorage.getItem('cc_google_client_id');
+            if (storedClientId) {
+                googleTokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: storedClientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata',
+                    callback: (tokenResponse) => {
+                        if (tokenResponse.error !== undefined) {
+                            showToast('Google 帳戶授權失敗：' + tokenResponse.error, 'error');
+                            return;
+                        }
+                        googleAccessToken = tokenResponse.access_token;
+                        document.getElementById('google-sync-btn').disabled = false;
+                        updateSyncBadge('connected');
+                        executeCloudSync();
+                    },
+                });
+                gisInited = true;
+                checkGisGapiInit();
+            }
+        }
+
+        function checkGisGapiInit() {
+            if (gapiInited && gisInited) {
+                document.getElementById('google-sync-btn').disabled = false;
+            }
+        }
+
+        function updateSyncBadge(status) {
+            const badge = document.getElementById('sync-status');
+            if (status === 'connected') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-green-950 text-emerald-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 已連結 Google`;
+            } else if (status === 'syncing') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-amber-950 text-amber-500 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> 正在同步中`;
+            } else if (status === 'success') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-blue-950 text-blue-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-400"></span> 雲端同步成功`;
+                setTimeout(() => { updateSyncBadge('connected'); }, 4000);
+            }
+        }
+
+        function syncWithGoogle(isBackground = false) {
+            if (!googleAccessToken) {
+                if (googleTokenClient) {
+                    googleTokenClient.requestAccessToken({ prompt: 'consent' });
+                } else {
+                    showToast('請先於下方設定中儲存您的 Google API 金鑰與 Client ID！', 'warn');
+                    switchTab('settings');
+                }
+            } else {
+                executeCloudSync(isBackground);
+            }
+        }
+
+        async function executeCloudSync(isBackground = false) {
+            if (!isBackground) updateSyncBadge('syncing');
+            
+            try {
+                gapi.client.setApiKey(localStorage.getItem('cc_google_api_key'));
+                await gapi.client.load('drive', 'v3');
+                
+                const response = await gapi.client.drive.files.list({
+                    q: "name = 'cc_manager_backup.json' and trashed = false",
+                    fields: 'files(id, name, modifiedTime)',
+                    spaces: 'appDataFolder'
+                });
+
+                const files = response.result.files;
+                const backupData = {
+                    cards: cards,
+                    records: records,
+                    lastUpdated: new Date().toISOString()
+                };
+
+                if (files && files.length > 0) {
+                    const fileId = files[0].id;
+                    
+                    const fileContentRes = await gapi.client.drive.files.get({
+                        fileId: fileId,
+                        alt: 'media'
+                    });
+                    
+                    const cloudData = fileContentRes.result;
+                    
+                    if (cloudData && cloudData.lastUpdated) {
+                        const cloudTime = new Date(cloudData.lastUpdated);
+                        const localTime = new Date(localStorage.getItem('cc_last_local_update') || 0);
+                        
+                        if (cloudTime > localTime) {
+                            cards = cloudData.cards || cards;
+                            records = cloudData.records || records;
+                            saveToLocal();
+                            if (!isBackground) showToast('已從 Google Drive 下載並更新為最新的雲端資料！', 'success');
+                            initApp();
+                            updateSyncBadge('success');
+                            return;
+                        }
+                    }
+
+                    await updateCloudFile(fileId, backupData);
+                } else {
+                    await createCloudFile(backupData);
+                }
+                
+                localStorage.setItem('cc_last_local_update', new Date().toISOString());
+                if (!isBackground) showToast('帳單與卡片資料已成功同步備份至 Google 雲端空間！', 'success');
+                updateSyncBadge('success');
+                
+            } catch(err) {
+                console.error(err);
+                if (!isBackground) showToast('同步失敗，請檢查金鑰與 API 授權。', 'error');
+                updateSyncBadge('connected');
+            }
+        }
+
+        function createCloudFile(data) {
+            const metadata = {
+                name: 'cc_manager_backup.json',
+                mimeType: 'application/json',
+                parents: ['appDataFolder']
+            };
+            return gapi.client.request({
+                path: '/upload/drive/v3/files',
+                method: 'POST',
+                params: { uploadType: 'multipart' },
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        }
+
+        function updateCloudFile(fileId, data) {
+            return gapi.client.request({
+                path: `/upload/drive/v3/files/${fileId}`,
+                method: 'PATCH',
+                params: { uploadType: 'media' },
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        }
+    </script>
+</body>
+</html>
