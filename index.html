@@ -11,15 +11,14 @@
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Platform Library -->
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
     
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        // 使用 CSS 變數來達成動態主題切換
                         bgMain: 'var(--bg-main)',
                         bgCard: 'var(--bg-card)',
                         textMain: 'var(--text-main)',
@@ -401,7 +400,7 @@
             </div>
             
             <div class="text-center text-xs text-textDim font-mono">
-                CardControl Version 1.1.0 (PWA Optimized)
+                CardControl Version 1.2.0 (Auto-Sync Optimized)
             </div>
         </section>
     </main>
@@ -609,7 +608,7 @@
             <p id="confirm-msg" class="text-sm text-textDim leading-relaxed font-medium"></p>
             <div class="flex gap-2">
                 <button id="confirm-cancel" class="flex-1 py-2.5 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition">取消</button>
-                <button id="confirm-ok" class="flex-1 py-2.5 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-sm font-bold transition">確定</button>
+                <button id="confirm-ok" class="flex-1 py-2.5 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-xs font-bold transition">確定</button>
             </div>
         </div>
     </div>
@@ -634,21 +633,6 @@
         let trendLineChartInstance = null;
         let cardUsageChartInstance = null;
 
-        // 預設資料初始化
-        const defaultData = {
-            cards: [
-                { id: 'card-1', bank: '國泰世華', name: 'CUBE 卡', lastFour: '8839', expiry: '12/28', billingCycleType: 'calendar', billingDay: 1, recommendedLimit: 20000, color: 'card-rose' },
-                { id: 'card-2', bank: '台新銀行', name: '玫瑰 Giving 卡', lastFour: '5201', expiry: '06/29', billingCycleType: 'billingDate', billingDay: 15, recommendedLimit: 15000, color: 'card-gold' },
-                { id: 'card-3', bank: '富邦銀行', name: 'J卡', lastFour: '9012', expiry: '09/27', billingCycleType: 'calendar', billingDay: 1, recommendedLimit: 10000, color: 'card-blue' }
-            ],
-            records: [
-                { id: 'r-1', cardId: 'card-1', date: getRelativeDate(0), time: '12:30', channel: '7-11便利商店', item: '經典拿鐵與御飯糰', amount: 95, payMethod: 'Line Pay', payMethodOther: '' },
-                { id: 'r-2', cardId: 'card-2', date: getRelativeDate(-2), time: '19:45', channel: '新光三越', item: '春季外套', amount: 3200, payMethod: '實體卡', payMethodOther: '' },
-                { id: 'r-3', cardId: 'card-3', date: getRelativeDate(-5), time: '15:10', channel: '星巴克', item: '特大杯美式', amount: 135, payMethod: 'Google Pay', payMethodOther: '' },
-                { id: 'r-4', cardId: 'card-1', date: getRelativeDate(-12), time: '21:00', channel: 'Uber Eats', item: '晚餐外送', amount: 450, payMethod: '網路刷卡', payMethodOther: '' }
-            ]
-        };
-
         // 輔助函式：取得今日或相對日期字串 YYYY-MM-DD
         function getRelativeDate(daysOffset) {
             const date = new Date();
@@ -658,16 +642,13 @@
 
         // --- 載入本機與雲端設定資料 ---
         window.onload = function() {
-            // 載入主題，預設修改為 'light' (極地純白)
             const savedTheme = localStorage.getItem('cc_theme') || 'light';
             changeTheme(savedTheme, false);
 
-            // 從 LocalStorage 載入資料
             const storedCards = localStorage.getItem('cc_cards');
             const storedRecords = localStorage.getItem('cc_records');
             const storedOtherPay = localStorage.getItem('cc_other_pay');
             
-            // 雲端同步設定載入
             const storedClientId = localStorage.getItem('cc_google_client_id');
             const storedApiKey = localStorage.getItem('cc_google_api_key');
             
@@ -675,38 +656,35 @@
                 cards = JSON.parse(storedCards);
                 records = JSON.parse(storedRecords);
             } else {
-                cards = defaultData.cards;
-                records = defaultData.records;
-                saveToLocal();
+                cards = [];
+                records = [];
             }
 
             if (storedOtherPay) {
                 document.getElementById('setting-other-pay-name').value = storedOtherPay;
             } else {
-                document.getElementById('setting-other-pay-name').value = '街口支付'; // 預設自訂
+                document.getElementById('setting-other-pay-name').value = '街口支付';
             }
 
             if (storedClientId) document.getElementById('setting-client-id').value = storedClientId;
             if (storedApiKey) document.getElementById('setting-api-key').value = storedApiKey;
 
-            // 初始畫面渲染
             initApp();
             
-            // 延遲載入 Google Drive SDK
-            setTimeout(() => {
-                try {
-                    gapiLoad();
-                    gisLoad();
-                } catch(e) {
-                    console.log("Google Drive 模組載入失敗，採用本機儲存模式。");
-                }
-            }, 1000);
+            // 載入 Google SDK 腳本
+            try {
+                gapiLoad();
+                gisLoad();
+            } catch(e) {
+                console.log("Google SDK 載入延遲");
+            }
         };
 
         function saveToLocal() {
             localStorage.setItem('cc_cards', JSON.stringify(cards));
             localStorage.setItem('cc_records', JSON.stringify(records));
             localStorage.setItem('cc_other_pay', document.getElementById('setting-other-pay-name').value);
+            localStorage.setItem('cc_last_local_update', new Date().toISOString());
         }
 
         function initApp() {
@@ -717,17 +695,14 @@
             populateCardSelectDropdowns();
         }
 
-        // --- 視圖切換 Tab Switching ---
         function switchTab(tabName) {
             currentTab = tabName;
             
-            // 切換視圖區顯示狀態
             document.querySelectorAll('.view-section').forEach(section => {
                 section.classList.add('hidden');
             });
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
 
-            // 調整底部導覽列樣式
             document.querySelectorAll('nav button').forEach(btn => {
                 btn.classList.remove('text-accentPrimary');
                 btn.classList.add('text-textDim');
@@ -735,7 +710,6 @@
             document.getElementById(`nav-${tabName}`).classList.remove('text-textDim');
             document.getElementById(`nav-${tabName}`).classList.add('text-accentPrimary');
 
-            // 觸發重新繪製與資料重算
             if (tabName === 'dashboard') {
                 renderDashboard();
             } else if (tabName === 'records') {
@@ -745,15 +719,12 @@
             }
         }
 
-        // --- 客製化主題切換 ---
         function changeTheme(themeName, save = true) {
             document.body.setAttribute('data-theme', themeName);
             if (save) {
                 localStorage.setItem('cc_theme', themeName);
                 showToast(`已切換至 ${getThemeNameDisplay(themeName)} 主題`, 'success');
             }
-            
-            // 同步更新 Chart.js 顏色配置並重畫
             updateChartColorsForTheme();
         }
 
@@ -766,79 +737,46 @@
             const style = getComputedStyle(document.body);
             const textColor = style.getPropertyValue('--text-dim').trim();
             const borderColor = style.getPropertyValue('--border-main').trim();
-            
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.color = textColor;
                 Chart.defaults.borderColor = borderColor;
             }
-            
-            if (currentTab === 'charts') {
-                updateCharts();
-            }
+            if (currentTab === 'charts') updateCharts();
         }
 
-        // --- 客製化 Toast 訊息 (取代 Alert) ---
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            
             let iconClass = 'fa-info-circle text-blue-500';
             let borderClass = 'border-blue-900/50';
-            if (type === 'success') {
-                iconClass = 'fa-circle-check text-green-500';
-                borderClass = 'border-green-900/50';
-            } else if (type === 'error') {
-                iconClass = 'fa-circle-exclamation text-red-500';
-                borderClass = 'border-red-900/50';
-            } else if (type === 'warn') {
-                iconClass = 'fa-triangle-exclamation text-amber-500';
-                borderClass = 'border-amber-900/50';
-            }
+            if (type === 'success') { iconClass = 'fa-circle-check text-green-500'; borderClass = 'border-green-900/50'; }
+            else if (type === 'error') { iconClass = 'fa-circle-exclamation text-red-500'; borderClass = 'border-red-900/50'; }
+            else if (type === 'warn') { iconClass = 'fa-triangle-exclamation text-amber-500'; borderClass = 'border-amber-900/50'; }
 
             toast.className = `flex items-center space-x-3 bg-bgCard/95 border ${borderClass} px-5 py-4 rounded-2xl shadow-xl w-full max-w-sm pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0`;
-            toast.innerHTML = `
-                <i class="fa-solid ${iconClass} text-lg flex-shrink-0"></i>
-                <span class="text-sm font-bold text-textMain flex-1 leading-relaxed">${message}</span>
-            `;
-            
+            toast.innerHTML = `<i class="fa-solid ${iconClass} text-lg flex-shrink-0"></i><span class="text-sm font-bold text-textMain flex-1 leading-relaxed">${message}</span>`;
             container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.classList.remove('translate-y-4', 'opacity-0');
-            }, 10);
-
+            setTimeout(() => { toast.classList.remove('translate-y-4', 'opacity-0'); }, 10);
             setTimeout(() => {
                 toast.classList.add('translate-y-[-10px]', 'opacity-0');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
+                setTimeout(() => { toast.remove(); }, 300);
             }, 3000);
         }
 
-        // --- 客製化確認框 (取代 Confirm) ---
         function showConfirm(title, message, onOk) {
             const modal = document.getElementById('modal-confirm');
             document.getElementById('confirm-title').innerText = title;
             document.getElementById('confirm-msg').innerText = message;
-            
             modal.classList.remove('hidden');
-            
-            document.getElementById('confirm-ok').onclick = function() {
-                onOk();
-                modal.classList.add('hidden');
-            };
-            document.getElementById('confirm-cancel').onclick = function() {
-                modal.classList.add('hidden');
-            };
+            document.getElementById('confirm-ok').onclick = function() { onOk(); modal.classList.add('hidden'); };
+            document.getElementById('confirm-cancel').onclick = function() { modal.classList.add('hidden'); };
         }
 
-        // --- 計算卡片在特定期間的消費總額 ---
         function calculateCardSpent(card, mode = 'billing') {
             let total = 0;
             const now = new Date();
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth();
-            
             let startDate, endDate;
 
             if (mode === 'calendar' || card.billingCycleType === 'calendar') {
@@ -847,7 +785,6 @@
             } else {
                 const billDay = parseInt(card.billingDay);
                 const currentDay = now.getDate();
-
                 if (currentDay >= billDay) {
                     startDate = new Date(currentYear, currentMonth, billDay);
                     endDate = new Date(currentYear, currentMonth + 1, billDay - 1, 23, 59, 59);
@@ -865,19 +802,13 @@
                     }
                 }
             });
-
-            return {
-                total,
-                startDate: startDate.toISOString().split('T')[0],
-                endDate: endDate.toISOString().split('T')[0]
-            };
+            return { total, startDate: startDate.toISOString().split('T')[0], endDate: endDate.toISOString().split('T')[0] };
         }
 
         // ================================= A: 儀表板視覺渲染 =================================
         function renderDashboard() {
             const container = document.getElementById('dashboard-cards-container');
             const limitsContainer = document.getElementById('rewards-limit-container');
-            
             container.innerHTML = '';
             limitsContainer.innerHTML = '';
 
@@ -886,18 +817,19 @@
                     <div onclick="switchTab('cards')" class="w-full bg-bgCard border-2 border-dashed border-borderMain rounded-3xl p-6 text-center text-textDim cursor-pointer py-10 flex flex-col items-center justify-center space-y-2">
                         <i class="fa-solid fa-credit-card text-4xl"></i>
                         <span class="text-sm font-bold text-textDim">目前沒有登錄信用卡，點擊新增</span>
-                    </div>
-                `;
+                    </div>`;
                 limitsContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">請先至「卡片」頁面新增卡片</p>`;
+                document.getElementById('calendar-total').innerText = `NT$ 0`;
+                document.getElementById('top-pay-method').innerText = `無紀錄`;
+                document.getElementById('top-pay-count').innerText = `消費 0 次`;
+                document.getElementById('dashboard-recent-records').innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">目前尚無任何刷卡消費紀錄</p>`;
                 return;
             }
 
-            // 1. 渲染頂部精緻信用卡 Carousel (調整字型大小，避免溢出並優化排版)
             cards.forEach(card => {
                 const calc = calculateCardSpent(card, 'billing');
                 const recommend = parseFloat(card.recommendedLimit || 0);
                 const pct = recommend > 0 ? Math.min((calc.total / recommend) * 100, 100) : 0;
-                
                 let glowColor = 'bg-accentPrimary shadow-blue-500/20';
                 if (pct >= 90 && pct < 100) glowColor = 'bg-amber-500 shadow-amber-500/30';
                 else if (pct >= 100) glowColor = 'bg-red-500 shadow-red-500/40';
@@ -907,14 +839,11 @@
                 cardEl.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div class="space-y-1">
-                            <span class="text-xs uppercase font-black tracking-widest text-white/80">${card.bank}</span>
+                            <span class="text-xs uppercase font-black tracking-widest text-white/70">${card.bank}</span>
                             <h4 class="text-lg font-black text-white leading-tight">${card.name}</h4>
                         </div>
-                        <div class="w-10 h-8 rounded bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white text-xs font-black italic">
-                            VISA
-                        </div>
+                        <div class="w-10 h-8 rounded bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white text-xs font-black italic">VISA</div>
                     </div>
-                    
                     <div class="flex justify-between items-end">
                         <div>
                             <span class="text-xs text-white/60 block font-mono font-bold">CARD NUMBER</span>
@@ -924,20 +853,14 @@
                             <span class="text-xs text-white/60 block font-mono font-bold">EXPIRY</span>
                             <span class="text-sm font-mono font-bold text-white">${card.expiry}</span>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 container.appendChild(cardEl);
 
-                // 2. 建立額度極大化進度視窗
                 const limitCard = document.createElement('div');
                 limitCard.className = "space-y-2";
-                
                 let statusBadge = `<span class="text-xs bg-blue-900/50 text-blue-400 px-2.5 py-1 rounded-full font-bold">刷卡中</span>`;
-                if (pct >= 90 && pct < 100) {
-                    statusBadge = `<span class="text-xs bg-amber-950 text-amber-500 px-2.5 py-1 rounded-full font-bold">接近上限</span>`;
-                } else if (pct >= 100) {
-                    statusBadge = `<span class="text-xs bg-red-950 text-red-500 px-2.5 py-1 rounded-full font-bold">已達回饋上限 (請換卡)</span>`;
-                }
+                if (pct >= 90 && pct < 100) statusBadge = `<span class="text-xs bg-amber-950 text-amber-500 px-2.5 py-1 rounded-full font-bold">接近上限</span>`;
+                else if (pct >= 100) statusBadge = `<span class="text-xs bg-red-950 text-red-500 px-2.5 py-1 rounded-full font-bold">已達回饋上限 (請換卡)</span>`;
 
                 limitCard.innerHTML = `
                     <div class="flex justify-between items-center text-sm font-bold">
@@ -947,75 +870,47 @@
                         </div>
                         ${statusBadge}
                     </div>
-                    
                     <div class="w-full bg-bgMain rounded-full h-3.5 overflow-hidden border border-borderMain">
                         <div class="h-full rounded-full transition-all duration-500 ${glowColor}" style="width: ${pct}%"></div>
                     </div>
-                    
                     <div class="flex justify-between text-xs font-mono text-textDim font-bold">
                         <span>已刷 NT$ ${calc.total.toLocaleString()}</span>
                         <span>回饋上限 NT$ ${recommend.toLocaleString()}</span>
-                    </div>
-                `;
-                limitsContainer.innerHTML += `
-                    <div class="p-4 bg-bgMain/40 rounded-xl border border-borderMain space-y-2">
-                        ${limitCard.innerHTML}
-                    </div>
-                `;
+                    </div>`;
+                limitsContainer.innerHTML += `<div class="p-4 bg-bgMain/40 rounded-xl border border-borderMain space-y-2">${limitCard.innerHTML}</div>`;
             });
 
-            // 3. 計算並更新當月(日曆月)總消費
             let calendarTotalSum = 0;
-            cards.forEach(card => {
-                const calc = calculateCardSpent(card, 'calendar');
-                calendarTotalSum += calc.total;
-            });
+            cards.forEach(card => { calendarTotalSum += calculateCardSpent(card, 'calendar').total; });
             document.getElementById('calendar-total').innerText = `NT$ ${calendarTotalSum.toLocaleString()}`;
 
-            // 4. 計算並更新最常使用的刷卡支付管道
             const payCounts = {};
             records.forEach(r => {
                 const method = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
                 payCounts[method] = (payCounts[method] || 0) + 1;
             });
-            let topPay = '無紀錄';
-            let topCount = 0;
-            for (const [key, val] of Object.entries(payCounts)) {
-                if (val > topCount) {
-                    topCount = val;
-                    topPay = key;
-                }
-            }
+            let topPay = '無紀錄', topCount = 0;
+            for (const [key, val] of Object.entries(payCounts)) { if (val > topCount) { topCount = val; topPay = key; } }
             document.getElementById('top-pay-method').innerText = topPay;
             document.getElementById('top-pay-count').innerText = `本月消費 ${topCount} 次`;
 
-            // 5. 渲染最近 3 筆消費紀錄 (放大字型至 14px / 12px)
             const recentContainer = document.getElementById('dashboard-recent-records');
             recentContainer.innerHTML = '';
-            
             const sortedRecords = [...records].sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time)).slice(0, 3);
-            
             if (sortedRecords.length === 0) {
                 recentContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">目前尚無任何刷卡消費紀錄</p>`;
                 return;
             }
-
             sortedRecords.forEach(r => {
                 const card = cards.find(c => c.id === r.cardId) || { name: '未知卡片', lastFour: 'xxxx' };
-                const displayPayMethod = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
-                
                 recentContainer.innerHTML += `
                     <div class="flex items-center justify-between p-4 rounded-xl bg-bgMain/40 hover:bg-bgCard/60 border border-borderMain transition shadow-sm">
                         <div class="flex items-center space-x-3.5 min-w-0">
-                            <div class="w-10 h-10 rounded-full bg-accentPrimary/10 flex items-center justify-center flex-shrink-0 text-accentPrimary">
-                                <i class="fa-solid fa-shopping-bag text-base"></i>
-                            </div>
+                            <div class="w-10 h-10 rounded-full bg-accentPrimary/10 flex items-center justify-center flex-shrink-0 text-accentPrimary"><i class="fa-solid fa-shopping-bag text-base"></i></div>
                             <div class="min-w-0">
                                 <h4 class="text-sm font-bold text-textMain truncate">${r.channel}</h4>
                                 <p class="text-xs text-textDim font-semibold flex items-center gap-1.5 mt-1">
-                                    <span class="truncate">${card.name} (${card.lastFour})</span>
-                                    <span>•</span>
-                                    <span>${displayPayMethod}</span>
+                                    <span class="truncate">${card.name} (${card.lastFour})</span><span>•</span><span>${r.payMethod === '其他' ? r.payMethodOther : r.payMethod}</span>
                                 </p>
                             </div>
                         </div>
@@ -1023,8 +918,7 @@
                             <span class="text-base font-bold font-mono text-textMain">NT$ ${parseFloat(r.amount).toLocaleString()}</span>
                             <span class="block text-xs text-textDim font-mono font-semibold mt-1">${r.date}</span>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
         }
 
@@ -1032,33 +926,21 @@
         function renderCardsList() {
             const container = document.getElementById('cards-list-container');
             container.innerHTML = '';
-
             if (cards.length === 0) {
                 container.innerHTML = `
                     <div onclick="openCardModal()" class="w-full bg-bgCard border-2 border-dashed border-borderMain rounded-3xl p-6 text-center text-textDim cursor-pointer py-12 flex flex-col items-center justify-center space-y-3 shadow-sm">
                         <i class="fa-solid fa-credit-card text-5xl text-textDim"></i>
-                        <div>
-                            <p class="text-base font-bold text-textMain">尚未新增任何信用卡</p>
-                            <p class="text-sm text-textDim mt-1 font-medium">立刻建立您的首張信用卡以管理回饋與額度</p>
-                        </div>
-                    </div>
-                `;
+                        <div><p class="text-base font-bold text-textMain">尚未新增任何信用卡</p><p class="text-sm text-textDim mt-1 font-medium">立刻建立您的首張信用卡以管理回饋與額度</p></div>
+                    </div>`;
                 return;
             }
-
             cards.forEach(card => {
                 const calc = calculateCardSpent(card, 'billing');
                 const recommend = parseFloat(card.recommendedLimit || 0);
-                const pct = recommend > 0 ? Math.min((calc.total / recommend) * 100, 100) : 0;
-                
                 container.innerHTML += `
                     <div class="bg-bgCard border border-borderMain rounded-3xl overflow-hidden shadow-xl">
                         <div class="p-5 ${card.color} flex justify-between items-center text-white">
-                            <div>
-                                <span class="text-xs uppercase font-black tracking-widest text-white/80">${card.bank}</span>
-                                <h3 class="text-lg font-black leading-tight">${card.name}</h3>
-                                <p class="text-sm font-mono font-bold tracking-wider mt-1.5">•••• ${card.lastFour}</p>
-                            </div>
+                            <div><span class="text-xs uppercase font-black tracking-widest text-white/70">${card.bank}</span><h3 class="text-lg font-black leading-tight">${card.name}</h3><p class="text-sm font-mono font-bold tracking-wider mt-1.5">•••• ${card.lastFour}</p></div>
                             <div class="flex space-x-2.5">
                                 <button onclick="openCardModal('${card.id}')" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition"><i class="fa-solid fa-pen text-sm"></i></button>
                                 <button onclick="deleteCard('${card.id}')" class="w-9 h-9 rounded-full bg-white/20 hover:bg-red-500/30 flex items-center justify-center transition"><i class="fa-solid fa-trash-can text-sm"></i></button>
@@ -1066,35 +948,20 @@
                         </div>
                         <div class="p-5 bg-bgMain/20 space-y-4">
                             <div class="grid grid-cols-2 gap-4 text-sm font-bold">
-                                <div>
-                                    <span class="text-textDim block text-xs font-semibold mb-1">結帳期制度</span>
-                                    <span class="text-textMain">${card.billingCycleType === 'calendar' ? '整個月曆月 (1~31日)' : `每月 ${card.billingDay} 號結帳`}</span>
-                                </div>
-                                <div>
-                                    <span class="text-textDim block text-xs font-semibold mb-1">有效期限</span>
-                                    <span class="text-textMain font-mono">${card.expiry}</span>
-                                </div>
+                                <div><span class="text-textDim block text-xs font-semibold mb-1">結帳期制度</span><span class="text-textMain">${card.billingCycleType === 'calendar' ? '整個月曆月 (1~31日)' : `每月 ${card.billingDay} 號結帳`}</span></div>
+                                <div><span class="text-textDim block text-xs font-semibold mb-1">有效期限</span><span class="text-textMain font-mono">${card.expiry}</span></div>
                             </div>
                             <div class="pt-3 border-t border-borderMain">
-                                <div class="flex justify-between text-sm mb-2 font-bold">
-                                    <span class="text-textDim">當期帳單累積消費</span>
-                                    <span class="font-mono text-textMain">NT$ ${calc.total.toLocaleString()} / NT$ ${recommend.toLocaleString()}</span>
-                                </div>
-                                <div class="w-full bg-bgMain rounded-full h-2.5">
-                                    <div class="bg-accentPrimary h-full rounded-full" style="width: ${pct}%"></div>
-                                </div>
+                                <div class="flex justify-between text-sm mb-2 font-bold"><span class="text-textDim">當期帳單累積消費</span><span class="font-mono text-textMain">NT$ ${calc.total.toLocaleString()} / NT$ ${recommend.toLocaleString()}</span></div>
+                                <div class="w-full bg-bgMain rounded-full h-2.5"><div class="bg-accentPrimary h-full rounded-full" style="width: ${recommend > 0 ? Math.min((calc.total/recommend)*100, 100) : 0}%"></div></div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
         }
 
-        // 彈出新增/編輯卡片視窗
         function openCardModal(cardId = '') {
             const modal = document.getElementById('modal-card');
-            const title = document.getElementById('card-modal-title');
-            
             document.getElementById('card-id').value = '';
             document.getElementById('card-bank').value = '';
             document.getElementById('card-name').value = '';
@@ -1103,11 +970,10 @@
             document.getElementById('card-billing-type').value = 'calendar';
             document.getElementById('card-billing-day').value = '';
             document.getElementById('card-recommended-limit').value = '';
-            
             toggleBillingDayField();
 
             if (cardId) {
-                title.innerText = '編輯信用卡';
+                document.getElementById('card-modal-title').innerText = '編輯信用卡';
                 const card = cards.find(c => c.id === cardId);
                 if (card) {
                     document.getElementById('card-id').value = card.id;
@@ -1118,36 +984,21 @@
                     document.getElementById('card-billing-type').value = card.billingCycleType;
                     document.getElementById('card-billing-day').value = card.billingDay || '';
                     document.getElementById('card-recommended-limit').value = card.recommendedLimit;
-                    
-                    const colorRadios = document.querySelectorAll('input[name="card-color"]');
-                    colorRadios.forEach(radio => {
-                        if (radio.value === card.color) radio.checked = true;
-                    });
-                    
+                    document.querySelectorAll('input[name="card-color"]').forEach(r => { if(r.value === card.color) r.checked = true; });
                     toggleBillingDayField();
                 }
             } else {
-                title.innerText = '新增信用卡';
+                document.getElementById('card-modal-title').innerText = '新增信用卡';
             }
-            
             modal.classList.remove('hidden');
         }
 
-        function closeCardModal() {
-            document.getElementById('modal-card').classList.add('hidden');
-        }
-
+        function closeCardModal() { document.getElementById('modal-card').classList.add('hidden'); }
         function toggleBillingDayField() {
             const type = document.getElementById('card-billing-type').value;
-            const wrapper = document.getElementById('card-billing-day-wrapper');
-            if (type === 'billingDate') {
-                wrapper.classList.remove('hidden');
-            } else {
-                wrapper.classList.add('hidden');
-            }
+            document.getElementById('card-billing-day-wrapper').classList.toggle('hidden', type !== 'billingDate');
         }
 
-        // 儲存卡片資訊
         function saveCard() {
             const id = document.getElementById('card-id').value;
             const bank = document.getElementById('card-bank').value.trim();
@@ -1159,66 +1010,33 @@
             const recommendedLimit = document.getElementById('card-recommended-limit').value;
             const color = document.querySelector('input[name="card-color"]:checked').value;
 
-            if (!bank || !name || lastFour.length !== 4 || !expiry || !recommendedLimit) {
-                showToast('請完整填寫必填欄位 (卡號須為 4 碼)', 'warn');
-                return;
-            }
-            if (billingCycleType === 'billingDate' && (!billingDay || billingDay < 1 || billingDay > 31)) {
-                showToast('請填寫有效的帳單結帳日 (1 ~ 31日)', 'warn');
-                return;
-            }
+            if (!bank || !name || lastFour.length !== 4 || !expiry || !recommendedLimit) { showToast('請完整填寫必填欄位 (卡號須為 4 碼)', 'warn'); return; }
+            const cardData = { id: id || 'card-' + Date.now(), bank, name, lastFour, expiry, billingCycleType, billingDay: billingCycleType === 'billingDate' ? parseInt(billingDay) : 1, recommendedLimit: parseFloat(recommendedLimit), color };
 
-            const cardData = {
-                id: id || 'card-' + Date.now(),
-                bank,
-                name,
-                lastFour,
-                expiry,
-                billingCycleType,
-                billingDay: billingCycleType === 'billingDate' ? parseInt(billingDay) : 1,
-                recommendedLimit: parseFloat(recommendedLimit),
-                color
-            };
-
-            if (id) {
-                const index = cards.findIndex(c => c.id === id);
-                if (index !== -1) cards[index] = cardData;
-                showToast('卡片編輯完成！', 'success');
-            } else {
-                cards.push(cardData);
-                showToast('全新信用卡新增成功！', 'success');
-            }
+            if (id) { const i = cards.findIndex(c => c.id === id); if (i !== -1) cards[i] = cardData; } 
+            else { cards.push(cardData); }
 
             saveToLocal();
             closeCardModal();
             initApp();
+            triggerAutoCloudSync();
         }
 
         function deleteCard(cardId) {
-            const card = cards.find(c => c.id === cardId);
-            if (!card) return;
-
-            showConfirm(
-                '刪除卡片',
-                `確定要刪除「${card.name} (${card.lastFour})」嗎？這會連同其所屬之消費刷卡明細一同清除。`,
-                () => {
-                    cards = cards.filter(c => c.id !== cardId);
-                    records = records.filter(r => r.cardId !== cardId);
-                    saveToLocal();
-                    showToast('卡片及關聯消費已成功移除', 'success');
-                    initApp();
-                }
-            );
+            showConfirm('刪除卡片', `確定要刪除此卡片嗎？這會連同其刷卡明細一同清除。`, () => {
+                cards = cards.filter(c => c.id !== cardId);
+                records = records.filter(r => r.cardId !== cardId);
+                saveToLocal();
+                initApp();
+                triggerAutoCloudSync();
+            });
         }
 
         // ================================= C: 刷卡明細管理 =================================
         function populateCardSelectDropdowns() {
             const dropdown = document.getElementById('record-card');
             dropdown.innerHTML = '';
-            
-            cards.forEach(card => {
-                dropdown.innerHTML += `<option value="${card.id}">${card.bank} - ${card.name} (${card.lastFour})</option>`;
-            });
+            cards.forEach(card => { dropdown.innerHTML += `<option value="${card.id}">${card.bank} - ${card.name} (${card.lastFour})</option>`; });
         }
 
         function renderRecordsList() {
@@ -1226,40 +1044,21 @@
             const filterContainer = document.getElementById('record-card-filter-container');
             const periodMode = document.getElementById('record-period-filter').value;
             
-            const activeClass = "bg-accentPrimary text-white border-transparent shadow-sm";
-            const inactiveClass = "bg-bgCard text-textDim border-borderMain hover:bg-bgMain";
-            
-            let filterHtml = `
-                <button onclick="filterRecordsByCard('all')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === 'all' ? activeClass : inactiveClass}">
-                    全部卡片
-                </button>
-            `;
+            let filterHtml = `<button onclick="filterRecordsByCard('all')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === 'all' ? 'bg-accentPrimary text-white border-transparent shadow-sm' : 'bg-bgCard text-textDim border-borderMain hover:bg-bgMain'}">全部卡片</button>`;
             cards.forEach(card => {
-                filterHtml += `
-                    <button onclick="filterRecordsByCard('${card.id}')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === card.id ? activeClass : inactiveClass}">
-                        ${card.name}
-                    </button>
-                `;
+                filterHtml += `<button onclick="filterRecordsByCard('${card.id}')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === card.id ? 'bg-accentPrimary text-white border-transparent shadow-sm' : 'bg-bgCard text-textDim border-borderMain hover:bg-bgMain'}">${card.name}</button>`;
             });
             filterContainer.innerHTML = filterHtml;
 
             container.innerHTML = '';
             let filtered = [...records];
-
-            if (currentRecordCardFilter !== 'all') {
-                filtered = filtered.filter(r => r.cardId === currentRecordCardFilter);
-            }
+            if (currentRecordCardFilter !== 'all') filtered = filtered.filter(r => r.cardId === currentRecordCardFilter);
 
             if (periodMode === 'calendar') {
                 const now = new Date();
-                const year = now.getFullYear();
-                const month = now.getMonth();
-                const start = new Date(year, month, 1);
-                const end = new Date(year, month + 1, 0, 23, 59, 59);
-                filtered = filtered.filter(r => {
-                    const d = new Date(r.date);
-                    return d >= start && d <= end;
-                });
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                filtered = filtered.filter(r => { const d = new Date(r.date); return d >= start && d <= end; });
             } else if (periodMode === 'billing') {
                 filtered = filtered.filter(r => {
                     const card = cards.find(c => c.id === r.cardId);
@@ -1270,37 +1069,23 @@
             }
 
             filtered.sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
-
             if (filtered.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 bg-bgCard border border-borderMain rounded-3xl text-textDim space-y-2 shadow-sm">
-                        <i class="fa-solid fa-list-check text-4xl"></i>
-                        <p class="text-sm font-bold">在此區間下沒有找到任何消費紀錄</p>
-                    </div>
-                `;
+                container.innerHTML = `<div class="text-center py-12 bg-bgCard border border-borderMain rounded-3xl text-textDim space-y-2 shadow-sm"><i class="fa-solid fa-list-check text-4xl"></i><p class="text-sm font-bold">在此區間下沒有找到任何消費紀錄</p></div>`;
                 return;
             }
 
             filtered.forEach(r => {
-                const card = cards.find(c => c.id === r.cardId) || { name: '未知卡片', lastFour: 'xxxx', color: 'card-dark' };
-                const displayPayMethod = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
-
+                const card = cards.find(c => c.id === r.cardId) || { name: '未知', color: 'card-dark' };
                 container.innerHTML += `
                     <div class="bg-bgCard border border-borderMain rounded-2xl p-4.5 flex justify-between items-center hover:border-textDim/20 transition shadow-sm">
                         <div class="flex items-center space-x-3.5 min-w-0">
                             <div class="w-3 h-12 rounded-full ${card.color} flex-shrink-0"></div>
-                            
                             <div class="min-w-0 space-y-1">
                                 <h4 class="text-base font-bold text-textMain truncate leading-tight">${r.channel}</h4>
-                                <div class="flex items-center space-x-2 text-xs text-textDim font-bold">
-                                    <span class="truncate">${card.name}</span>
-                                    <span>•</span>
-                                    <span class="truncate">${displayPayMethod}</span>
-                                </div>
+                                <div class="flex items-center space-x-2 text-xs text-textDim font-bold"><span class="truncate">${card.name}</span><span>•</span><span class="truncate">${r.payMethod === '其他' ? r.payMethodOther : r.payMethod}</span></div>
                                 ${r.item ? `<p class="text-sm text-textDim font-semibold truncate bg-bgMain/40 px-2 py-0.5 rounded">${r.item}</p>` : ''}
                             </div>
                         </div>
-                        
                         <div class="flex items-center space-x-3.5 flex-shrink-0 pl-2">
                             <div class="text-right">
                                 <span class="text-base font-bold font-mono text-textMain block">NT$ ${parseFloat(r.amount).toLocaleString()}</span>
@@ -1311,42 +1096,29 @@
                                 <button onclick="deleteRecord('${r.id}')" class="text-textDim hover:text-red-500 transition p-1 text-sm"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
         }
 
-        function filterRecordsByCard(cardId) {
-            currentRecordCardFilter = cardId;
-            renderRecordsList();
-        }
+        function filterRecordsByCard(cardId) { currentRecordCardFilter = cardId; renderRecordsList(); }
 
         function openAddRecordModal(recordId = '') {
-            if (cards.length === 0) {
-                showToast('請先新增最少一張信用卡！', 'warn');
-                switchTab('cards');
-                return;
-            }
-
+            if (cards.length === 0) { showToast('請先新增信用卡！', 'warn'); switchTab('cards'); return; }
             const modal = document.getElementById('modal-record');
-            const title = document.getElementById('record-modal-title');
-            
             document.getElementById('record-id').value = '';
             document.getElementById('record-amount').value = '';
             document.getElementById('record-channel').value = '';
             document.getElementById('record-item').value = '';
             document.getElementById('record-pay-method').value = '實體卡';
             document.getElementById('record-pay-other').value = '';
-            
             const now = new Date();
             document.getElementById('record-date').value = now.toISOString().split('T')[0];
             document.getElementById('record-time').value = now.toTimeString().substring(0, 5);
-            
             populateCardSelectDropdowns();
             togglePayMethodOtherField();
 
             if (recordId) {
-                title.innerText = '編輯刷卡紀錄';
+                document.getElementById('record-modal-title').innerText = '編輯刷卡紀錄';
                 const r = records.find(item => item.id === recordId);
                 if (r) {
                     document.getElementById('record-id').value = r.id;
@@ -1358,30 +1130,18 @@
                     document.getElementById('record-item').value = r.item;
                     document.getElementById('record-pay-method').value = r.payMethod;
                     document.getElementById('record-pay-other').value = r.payMethodOther || '';
-                    
                     togglePayMethodOtherField();
                 }
             } else {
-                title.innerText = '記錄一筆刷卡';
+                document.getElementById('record-modal-title').innerText = '記錄一筆刷卡';
             }
-
             modal.classList.remove('hidden');
         }
 
-        function closeRecordModal() {
-            document.getElementById('modal-record').classList.add('hidden');
-        }
-
+        function closeRecordModal() { document.getElementById('modal-record').classList.add('hidden'); }
         function togglePayMethodOtherField() {
             const method = document.getElementById('record-pay-method').value;
-            const wrapper = document.getElementById('record-pay-other-wrapper');
-            if (method === '其他') {
-                wrapper.classList.remove('hidden');
-                const defaultOther = localStorage.getItem('cc_other_pay') || '自訂支付';
-                document.getElementById('record-pay-other').value = defaultOther;
-            } else {
-                wrapper.classList.add('hidden');
-            }
+            document.getElementById('record-pay-other-wrapper').classList.toggle('hidden', method !== '反饋' && method !== '其他');
         }
 
         function saveRecord() {
@@ -1395,111 +1155,56 @@
             const payMethod = document.getElementById('record-pay-method').value;
             const payMethodOther = document.getElementById('record-pay-other').value.trim();
 
-            if (!cardId || !amount || !date || !time || !channel) {
-                showToast('請完整填寫消費金額、日期與通路等必填欄位！', 'warn');
-                return;
-            }
+            if (!cardId || !amount || !date || !time || !channel) { showToast('請完整填寫必填欄位！', 'warn'); return; }
+            const recordData = { id: id || 'r-' + Date.now(), cardId, amount: parseFloat(amount), date, time, channel, item, payMethod, payMethodOther: payMethod === '其他' ? payMethodOther : '' };
 
-            const recordData = {
-                id: id || 'r-' + Date.now(),
-                cardId,
-                amount: parseFloat(amount),
-                date,
-                time,
-                channel,
-                item,
-                payMethod,
-                payMethodOther: payMethod === '其他' ? payMethodOther : ''
-            };
-
-            if (id) {
-                const index = records.findIndex(r => r.id === id);
-                if (index !== -1) records[index] = recordData;
-                showToast('刷卡消費紀錄編輯成功！', 'success');
-            } else {
-                records.push(recordData);
-                showToast('消費紀錄成功寫入！', 'success');
-            }
+            if (id) { const i = records.findIndex(r => r.id === id); if (i !== -1) records[i] = recordData; } 
+            else { records.push(recordData); }
 
             saveToLocal();
             closeRecordModal();
             initApp();
-            
-            if (localStorage.getItem('cc_google_sync_enabled') === 'true') {
-                syncWithGoogle(true);
-            }
+            triggerAutoCloudSync();
         }
 
         function deleteRecord(recordId) {
-            showConfirm(
-                '刪除消費明細',
-                '確定要刪除此筆刷卡消費明細嗎？此操作不可還原。',
-                () => {
-                    records = records.filter(r => r.id !== recordId);
-                    saveToLocal();
-                    showToast('已刪除該消費明細', 'success');
-                    initApp();
-                }
-            );
+            showConfirm('刪除消費明細', '確定要刪除此筆刷卡紀錄嗎？', () => {
+                records = records.filter(r => r.id !== recordId);
+                saveToLocal();
+                initApp();
+                triggerAutoCloudSync();
+            });
         }
 
         // ================================= D: Chart.js 圖表分析 =================================
         function updateCharts() {
             if (cards.length === 0 || records.length === 0) return;
-
             const timeFilter = document.getElementById('chart-time-filter').value;
             let filtered = [...records];
             
-            const now = new Date();
             if (timeFilter === 'current-month') {
-                const year = now.getFullYear();
-                const month = now.getMonth();
-                const start = new Date(year, month, 1);
+                const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
                 filtered = filtered.filter(r => new Date(r.date) >= start);
             } else if (timeFilter === 'last-30') {
-                const start = new Date();
-                start.setDate(start.getDate() - 30);
+                const start = new Date(); start.setDate(start.getDate() - 30);
                 filtered = filtered.filter(r => new Date(r.date) >= start);
             }
 
-            // 1. 支付管道佔比數據
             const payMethodsMap = {};
             filtered.forEach(r => {
                 const method = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
                 payMethodsMap[method] = (payMethodsMap[method] || 0) + parseFloat(r.amount);
             });
-            const payLabels = Object.keys(payMethodsMap);
-            const payData = Object.values(payMethodsMap);
 
-            // 2. 趨勢累計數據
             const trendMap = {};
-            for (let i = 14; i >= 0; i--) {
-                const dStr = getRelativeDate(-i);
-                trendMap[dStr] = 0;
-            }
-            filtered.forEach(r => {
-                if (trendMap[r.date] !== undefined) {
-                    trendMap[r.date] += parseFloat(r.amount);
-                }
-            });
-            const trendLabels = Object.keys(trendMap).map(d => d.substring(5));
+            for (let i = 14; i >= 0; i--) { trendMap[getRelativeDate(-i)] = 0; }
+            filtered.forEach(r => { if (trendMap[r.date] !== undefined) trendMap[r.date] += parseFloat(r.amount); });
             let runningTotal = 0;
-            const trendData = Object.values(trendMap).map(val => {
-                runningTotal += val;
-                return runningTotal;
-            });
+            const trendData = Object.values(trendMap).map(val => { runningTotal += val; return runningTotal; });
 
-            // 3. 各信用卡消費總額
             const cardUsageMap = {};
             cards.forEach(c => { cardUsageMap[c.name] = 0; });
-            filtered.forEach(r => {
-                const card = cards.find(c => c.id === r.cardId);
-                if (card) {
-                    cardUsageMap[card.name] = (cardUsageMap[card.name] || 0) + parseFloat(r.amount);
-                }
-            });
-            const cardLabels = Object.keys(cardUsageMap);
-            const cardData = Object.values(cardUsageMap);
+            filtered.forEach(r => { const c = cards.find(card => card.id === r.cardId); if (c) cardUsageMap[c.name] += parseFloat(r.amount); });
 
             if (payMethodChartInstance) payMethodChartInstance.destroy();
             if (trendLineChartInstance) trendLineChartInstance.destroy();
@@ -1509,218 +1214,139 @@
             const textDimColor = style.getPropertyValue('--text-dim').trim();
             const borderMainColor = style.getPropertyValue('--border-main').trim();
 
-            // A. Pie Chart
-            const ctx1 = document.getElementById('payMethodChart').getContext('2d');
-            payMethodChartInstance = new Chart(ctx1, {
+            payMethodChartInstance = new Chart(document.getElementById('payMethodChart').getContext('2d'), {
                 type: 'pie',
-                data: {
-                    labels: payLabels,
-                    datasets: [{
-                        data: payData,
-                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E', '#6B7280'],
-                        borderWidth: 1,
-                        borderColor: borderMainColor
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'right', labels: { color: textDimColor, font: { size: 11, weight: 'bold' } } }
-                    }
-                }
+                data: { labels: Object.keys(payMethodsMap), datasets: [{ data: Object.values(payMethodsMap), backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'], borderWidth: 1, borderColor: borderMainColor }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: textDimColor, font: { size: 11, weight: 'bold' } } } } }
             });
 
-            // B. Line Chart
-            const ctx2 = document.getElementById('trendLineChart').getContext('2d');
-            trendLineChartInstance = new Chart(ctx2, {
+            trendLineChartInstance = new Chart(document.getElementById('trendLineChart').getContext('2d'), {
                 type: 'line',
-                data: {
-                    labels: trendLabels,
-                    datasets: [{
-                        label: '累計刷卡金額 (NT$)',
-                        data: trendData,
-                        borderColor: '#1D4ED8',
-                        backgroundColor: 'rgba(29, 78, 216, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 2.5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 10, weight: 'bold' } } },
-                        y: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 10, weight: 'bold' } } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
+                data: { labels: Object.keys(trendMap).map(d => d.substring(5)), datasets: [{ label: '累計刷卡金額', data: trendData, borderColor: '#1D4ED8', backgroundColor: 'rgba(29, 78, 216, 0.1)', fill: true, tension: 0.3, borderWidth: 2.5 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: borderMainColor }, ticks: { color: textDimColor } }, y: { grid: { color: borderMainColor }, ticks: { color: textDimColor } } }, plugins: { legend: { display: false } } }
             });
 
-            // C. Bar Chart
-            const ctx3 = document.getElementById('cardUsageChart').getContext('2d');
-            cardUsageChartInstance = new Chart(ctx3, {
+            cardUsageChartInstance = new Chart(document.getElementById('cardUsageChart').getContext('2d'), {
                 type: 'bar',
-                data: {
-                    labels: cardLabels,
-                    datasets: [{
-                        data: cardData,
-                        backgroundColor: ['#EF4444', '#F59E0B', '#1D4ED8', '#10B981', '#8B5CF6'],
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: textDimColor, font: { size: 11, weight: 'bold' } } },
-                        y: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 11, weight: 'bold' } } }
-                    },
-                    plugins: { legend: { display: false } }
-                }
+                data: { labels: Object.keys(cardUsageMap), datasets: [{ data: Object.values(cardUsageMap), backgroundColor: ['#EF4444', '#F59E0B', '#1D4ED8', '#10B981'], borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: textDimColor } }, y: { grid: { color: borderMainColor }, ticks: { color: textDimColor } } }, plugins: { legend: { display: false } } }
             });
         }
 
         // ================================= E: 設定與雲端備份 =================================
-        function openSyncSettings() {
-            switchTab('settings');
-            document.getElementById('setting-client-id').scrollIntoView({ behavior: 'smooth' });
-        }
-
+        function openSyncSettings() { switchTab('settings'); document.getElementById('setting-client-id').scrollIntoView({ behavior: 'smooth' }); }
+        
         function saveSyncSettings() {
             const clientId = document.getElementById('setting-client-id').value.trim();
             const apiKey = document.getElementById('setting-api-key').value.trim();
-
-            if (!clientId || !apiKey) {
-                showToast('請正確填入您的 Google API Key 與 Client ID', 'warn');
-                return;
-            }
-
+            if (!clientId || !apiKey) { showToast('請完整填寫 Google API 憑證欄位！', 'warn'); return; }
             localStorage.setItem('cc_google_client_id', clientId);
             localStorage.setItem('cc_google_api_key', apiKey);
-            localStorage.setItem('cc_google_sync_enabled', 'true');
-            
-            showToast('Google API 設定已儲存！請嘗試進行同步。', 'success');
-            document.getElementById('google-sync-btn').disabled = false;
+            showToast('API 參數儲存成功！正在啟動授權機制...', 'success');
+            setTimeout(() => { location.reload(); }, 1000);
         }
 
         function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ cards, records }));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `CardControl_Backup_${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-            showToast('本機設定檔備份 JSON 匯出成功！', 'success');
+            const anchor = document.createElement('a');
+            anchor.setAttribute("href", dataStr);
+            anchor.setAttribute("download", `CardControl_Backup_${getRelativeDate(0)}.json`);
+            anchor.click();
+            showToast('JSON 備份匯出完成！', 'success');
         }
 
         function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (parsed.cards && parsed.records) {
-                        cards = parsed.cards;
-                        records = parsed.records;
-                        saveToLocal();
-                        showToast('JSON 設定與消費數據已成功匯入！', 'success');
-                        initApp();
-                    } else {
-                        showToast('匯入失敗：JSON 結構不符預期格式', 'error');
+                        cards = parsed.cards; records = parsed.records;
+                        saveToLocal(); initApp(); showToast('手動備份資料還原成功！', 'success');
                     }
-                } catch(err) {
-                    showToast('檔案格式錯誤，無法正確解析。', 'error');
-                }
+                } catch(err) { showToast('解讀檔案失敗，格式不正確。', 'error'); }
             };
             reader.readAsText(file);
         }
 
         function confirmClearData() {
-            showConfirm(
-                '清除所有資料',
-                '這將永久清空所有在本機儲存的信用卡、帳單資訊及刷卡明細，請確保已做好備份。',
-                () => {
-                    localStorage.clear();
-                    cards = [];
-                    records = [];
-                    showToast('資料已完全清空！', 'success');
-                    initApp();
-                }
-            );
-        }
-
-        // ================================= Google Drive API 同步機制 =================================
-        function gapiLoad() {
-            gapi.load('client', () => {
-                gapiInited = true;
-                checkGisGapiInit();
+            showConfirm('清除所有資料', '這會完全清空目前裝置上記錄的資料，確定執行？', () => {
+                localStorage.clear(); cards = []; records = []; initApp(); showToast('本機資料已完全清空！', 'success');
             });
         }
 
+        // ================================= Google Drive API 全自動融合同步機制 =================================
+        function gapiLoad() { gapi.load('client', () => { gapiInited = true; checkAndAutoLogin(); }); }
         function gisLoad() {
-            const storedClientId = localStorage.getItem('cc_google_client_id');
-            if (storedClientId) {
-                googleTokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: storedClientId,
-                    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata',
-                    callback: (tokenResponse) => {
-                        if (tokenResponse.error !== undefined) {
-                            showToast('Google 帳戶授權失敗：' + tokenResponse.error, 'error');
-                            return;
-                        }
-                        googleAccessToken = tokenResponse.access_token;
-                        document.getElementById('google-sync-btn').disabled = false;
-                        updateSyncBadge('connected');
-                        executeCloudSync();
-                    },
-                });
-                gisInited = true;
-                checkGisGapiInit();
-            }
+            const cid = localStorage.getItem('cc_google_client_id');
+            if (!cid) return;
+            googleTokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: cid,
+                scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata',
+                callback: (tokenResponse) => {
+                    if (tokenResponse.error) { showToast('Google 驗證遭拒。', 'error'); return; }
+                    googleAccessToken = tokenResponse.access_token;
+                    localStorage.setItem('cc_google_access_token', googleAccessToken);
+                    localStorage.setItem('cc_google_token_expiry', Date.now() + (tokenResponse.expires_in * 1000));
+                    updateSyncBadge('connected');
+                    executeCloudSync(false); // 首次點擊為顯性引導融合
+                },
+            });
+            gisInited = true;
+            checkAndAutoLogin();
         }
 
-        function checkGisGapiInit() {
-            if (gapiInited && gisInited) {
-                document.getElementById('google-sync-btn').disabled = false;
+        function checkAndAutoLogin() {
+            if (!gapiInited || !gisInited) return;
+            document.getElementById('google-sync-btn').disabled = false;
+            
+            // 背景自動重啟授權驗證鎖（無感快取登入）
+            const cachedToken = localStorage.getItem('cc_google_access_token');
+            const expiry = localStorage.getItem('cc_google_token_expiry');
+            if (cachedToken && expiry && Date.now() < parseInt(expiry)) {
+                googleAccessToken = cachedToken;
+                updateSyncBadge('connected');
+                executeCloudSync(true); // 自動背景靜態靜默同步
             }
         }
 
         function updateSyncBadge(status) {
             const badge = document.getElementById('sync-status');
             if (status === 'connected') {
-                badge.className = "text-sm px-3 py-1.5 rounded-full bg-green-950 text-emerald-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 已連結 Google`;
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-green-950 text-emerald-400 flex items-center gap-2 font-bold shadow-sm";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 雲端連線中`;
             } else if (status === 'syncing') {
-                badge.className = "text-sm px-3 py-1.5 rounded-full bg-amber-950 text-amber-500 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-amber-950 text-amber-500 flex items-center gap-2 font-bold shadow-sm";
                 badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> 正在同步中`;
             } else if (status === 'success') {
-                badge.className = "text-sm px-3 py-1.5 rounded-full bg-blue-950 text-blue-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-blue-950 text-blue-400 flex items-center gap-2 font-bold shadow-sm";
                 badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-400"></span> 雲端同步成功`;
-                setTimeout(() => { updateSyncBadge('connected'); }, 4000);
+                setTimeout(() => { if(googleAccessToken) updateSyncBadge('connected'); }, 3000);
             }
         }
 
-        function syncWithGoogle(isBackground = false) {
-            if (!googleAccessToken) {
+        function syncWithGoogle() {
+            const expiry = localStorage.getItem('cc_google_token_expiry');
+            if (!googleAccessToken || (expiry && Date.now() > parseInt(expiry))) {
                 if (googleTokenClient) {
-                    googleTokenClient.requestAccessToken({ prompt: 'consent' });
+                    googleTokenClient.requestAccessToken({ prompt: 'consent' }); // 引導彈出允許確認框
                 } else {
-                    showToast('請先於下方設定中儲存您的 Google API 金鑰與 Client ID！', 'warn');
+                    showToast('請先填寫您的 API 與 用戶端 ID！', 'warn');
                     switchTab('settings');
                 }
             } else {
-                executeCloudSync(isBackground);
+                executeCloudSync(false);
             }
+        }
+
+        function triggerAutoCloudSync() {
+            if (googleAccessToken) executeCloudSync(true);
         }
 
         async function executeCloudSync(isBackground = false) {
             if (!isBackground) updateSyncBadge('syncing');
-            
             try {
                 gapi.client.setApiKey(localStorage.getItem('cc_google_api_key'));
                 await gapi.client.load('drive', 'v3');
@@ -1732,65 +1358,52 @@
                 });
 
                 const files = response.result.files;
-                const backupData = {
-                    cards: cards,
-                    records: records,
-                    lastUpdated: new Date().toISOString()
-                };
+                const localUpdateTimeStr = localStorage.getItem('cc_last_local_update');
+                
+                const backupData = { cards, records, lastUpdated: localUpdateTimeStr || new Date().toISOString() };
 
                 if (files && files.length > 0) {
                     const fileId = files[0].id;
-                    
-                    const fileContentRes = await gapi.client.drive.files.get({
-                        fileId: fileId,
-                        alt: 'media'
-                    });
-                    
+                    const fileContentRes = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
                     const cloudData = fileContentRes.result;
                     
                     if (cloudData && cloudData.lastUpdated) {
                         const cloudTime = new Date(cloudData.lastUpdated);
-                        const localTime = new Date(localStorage.getItem('cc_last_local_update') || 0);
+                        const localTime = localUpdateTimeStr ? new Date(localUpdateTimeStr) : new Date(0);
                         
-                        if (cloudTime > localTime) {
-                            cards = cloudData.cards || cards;
-                            records = cloudData.records || records;
-                            saveToLocal();
-                            if (!isBackground) showToast('已從 Google Drive 下載並更新為最新的雲端資料！', 'success');
+                        // 關鍵點：如果本機沒卡片、沒紀錄，代表為全新裝置，或者是雲端比較新 -> 無條件強制下載覆蓋
+                        if (cards.length === 0 || cloudTime > localTime) {
+                            cards = cloudData.cards || [];
+                            records = cloudData.records || [];
+                            localStorage.setItem('cc_cards', JSON.stringify(cards));
+                            localStorage.setItem('cc_records', JSON.stringify(records));
+                            localStorage.setItem('cc_last_local_update', cloudData.lastUpdated);
+                            if (!isBackground) showToast('已成功從雲端同步下載最新刷卡與信用卡資料！', 'success');
                             initApp();
                             updateSyncBadge('success');
                             return;
                         }
                     }
-
+                    // 本機資料較新或相等，將最新本機狀態直接無感推送到雲端儲存
                     await updateCloudFile(fileId, backupData);
                 } else {
+                    // 雲端無舊檔案，直接上傳建立
                     await createCloudFile(backupData);
                 }
-                
-                localStorage.setItem('cc_last_local_update', new Date().toISOString());
-                if (!isBackground) showToast('帳單與卡片資料已成功同步備份至 Google 雲端空間！', 'success');
                 updateSyncBadge('success');
-                
             } catch(err) {
-                console.error(err);
-                if (!isBackground) showToast('同步失敗，請檢查金鑰與 API 授權。', 'error');
-                updateSyncBadge('connected');
+                console.error("同步失敗", err);
+                if (!isBackground) showToast('雲端連結被拒，請重新點選同步。', 'error');
             }
         }
 
         function createCloudFile(data) {
-            const metadata = {
-                name: 'cc_manager_backup.json',
-                mimeType: 'application/json',
-                parents: ['appDataFolder']
-            };
             return gapi.client.request({
                 path: '/upload/drive/v3/files',
                 method: 'POST',
                 params: { uploadType: 'multipart' },
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ cards: data.cards, records: data.records, lastUpdated: data.lastUpdated })
             });
         }
 
@@ -1800,7 +1413,7 @@
                 method: 'PATCH',
                 params: { uploadType: 'media' },
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ cards: data.cards, records: data.records, lastUpdated: data.lastUpdated })
             });
         }
     </script>
