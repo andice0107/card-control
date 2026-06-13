@@ -2,957 +2,1905 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智能國語教學與命題系統 (雙軌智慧出題終極版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <title>卡控 CardControl - 頂級信用卡與消費管理系統</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js for parsing textbook PDFs -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <!-- Mammoth.js for parsing exam DOCX files -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <!-- JSZip for OpenXML parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Platform Library -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // 使用 CSS 變數來達成動態主題切換
+                        bgMain: 'var(--bg-main)',
+                        bgCard: 'var(--bg-card)',
+                        textMain: 'var(--text-main)',
+                        textDim: 'var(--text-dim)',
+                        accentPrimary: 'var(--accent-primary)',
+                        accentSecondary: 'var(--accent-secondary)',
+                        borderMain: 'var(--border-main)',
+                    },
+                    fontFamily: {
+                        sans: ['PingFang TC', 'Heiti TC', 'Noto Sans TC', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=300;400;500;700;900&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        :root {
+            /* 預設: 極地純白 (Light Slate) - 提升對比度與易讀性，防吃力 */
+            --bg-main: #F1F5F9;
+            --bg-card: #FFFFFF;
+            --text-main: #0F172A; /* 極深藍灰，最高對比度 */
+            --text-dim: #334155;  /* 深灰色，確保輔助說明字依然清晰 */
+            --accent-primary: #1D4ED8; /* 飽和深藍色，按鈕高辨識度 */
+            --accent-secondary: #4338CA;
+            --border-main: #CBD5E1;
+        }
+
+        [data-theme='dark'] {
+            /* 深邃午夜 (Midnight Dark) */
+            --bg-main: #090D16;
+            --bg-card: #131926;
+            --text-main: #E2E8F0;
+            --text-dim: #94A3B8;
+            --accent-primary: #3B82F6;
+            --accent-secondary: #6366F1;
+            --border-main: #1F2937;
+        }
+
+        [data-theme='forest'] {
+            /* 翡翠森林 */
+            --bg-main: #061A14;
+            --bg-card: #0C2D24;
+            --text-main: #ECFDF5;
+            --text-dim: #A7F3D0;
+            --accent-primary: #10B981;
+            --accent-secondary: #059669;
+            --border-main: #134E42;
+        }
+
+        [data-theme='lavender'] {
+            /* 浪漫薰衣草 */
+            --bg-main: #0F0B1A;
+            --bg-card: #1E1631;
+            --text-main: #F5F3FF;
+            --text-dim: #C4B5FD;
+            --accent-primary: #8B5CF6;
+            --accent-secondary: #7C3AED;
+            --border-main: #31264E;
+        }
+
+        [data-theme='ocean'] {
+            /* 湛藍海洋 */
+            --bg-main: #08141E;
+            --bg-card: #0F2537;
+            --text-main: #F0F9FF;
+            --text-dim: #BAE6FD;
+            --accent-primary: #0EA5E9;
+            --accent-secondary: #0284C7;
+            --border-main: #1E3A8A;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        /* 隱藏滾動條但保持滾動功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .safe-top {
+            padding-top: env(safe-area-inset-top);
+        }
+        
+        /* 卡片漸變質感 */
+        .card-gold { background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%); }
+        .card-blue { background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); }
+        .card-purple { background: linear-gradient(135deg, #4C1D95 0%, #8B5CF6 100%); }
+        .card-green { background: linear-gradient(135deg, #064E3B 0%, #10B981 100%); }
+        .card-dark { background: linear-gradient(135deg, #111827 0%, #374151 100%); }
+        .card-rose { background: linear-gradient(135deg, #881337 0%, #F43F5E 100%); }
+
+        /* 高對比、主題適應性狀態標籤配色彩色 */
+        .status-badge-charging {
+            background-color: #DDBE78; /* 經典金黃 */
+            color: #554400;            /* 深金黃 */
+        }
+        .status-badge-warning {
+            background-color: #FEF3C7; /* 亮粉橘 */
+            color: #B45309;            /* 深粉橘 */
+        }
+        .status-badge-danger {
+            background-color: #FEE2E2; /* 亮粉紅 */
+            color: #B91C1C;            /* 深粉紅 */
+        }
+
+        /* 亮色模式下的狀態標籤特別強化對比 */
+        [data-theme='light'] .status-badge-charging { background-color: #DBEAFE; color: #1E40AF; } /* 改為明亮且對比極佳的深藍與粉藍搭配 */
+
+        /* 深色模式下的狀態標籤優化 */
+        [data-theme='dark'] .status-badge-charging { background-color: rgba(30, 58, 138, 0.4); color: #60A5FA; }
+        [data-theme='dark'] .status-badge-warning { background-color: rgba(120, 53, 4, 0.4); color: #FBBF24; }
+        [data-theme='dark'] .status-badge-danger { background-color: rgba(127, 29, 29, 0.4); color: #F87171; }
+
+        [data-theme='forest'] .status-badge-charging { background-color: rgba(6, 78, 59, 0.4); color: #34D399; }
+        [data-theme='lavender'] .status-badge-charging { background-color: rgba(76, 29, 149, 0.4); color: #C4B5FD; }
+        [data-theme='ocean'] .status-badge-charging { background-color: rgba(30, 58, 138, 0.4); color: #38BDF8; }
     </style>
 </head>
-<body class="min-h-screen text-slate-800 flex flex-col transition-colors duration-300">
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <!-- 主導航欄 -->
-    <header class="bg-indigo-600 text-white shadow-lg py-4 px-6 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <svg class="w-8 h-8 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <h1 class="text-xl md:text-2xl font-black tracking-wider">AI 智能國語教學與命題系統</h1>
-            </div>
-            <div class="flex items-center gap-4 w-full md:w-auto">
-                <div class="relative flex-1 md:flex-initial">
-                    <!-- 永久本地鎖定 API Key 輸入框 -->
-                    <input type="password" id="apiKeyInput" oninput="saveApiKeyToLocal(this.value)" placeholder="請輸入 Gemini API Key..." class="w-full md:w-64 px-4 py-2 bg-indigo-700 text-white rounded-lg placeholder-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-all text-sm">
+    <!-- 頂部導覽列 -->
+    <header class="bg-bgCard border-b border-borderMain safe-top flex-none z-30">
+        <div class="px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-accentPrimary to-accentSecondary flex items-center justify-center shadow-lg">
+                    <i class="fa-solid fa-credit-card text-white text-base"></i>
                 </div>
+                <span class="text-2xl font-black tracking-wider text-textMain">卡控 CardControl</span>
+            </div>
+            
+            <!-- 雲端同步狀態與按鈕 -->
+            <div class="flex items-center space-x-3">
+                <span id="sync-status" class="text-sm px-3 py-1.5 rounded-full bg-bgMain border border-borderMain text-textDim flex items-center gap-2 transition-all duration-300 font-bold cursor-pointer">
+                    <span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse"></span> 本機儲存
+                </span>
+                <button onclick="openSyncSettings()" class="text-textDim hover:text-textMain transition p-2 rounded-xl hover:bg-bgMain">
+                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                </button>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl mx-auto p-4 md:p-6 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section class="lg:col-span-5 space-y-6">
-            <!-- 1. 課本教材解析 -->
-            <div class="bg-white rounded-2xl shadow-md p-6 border border-slate-100 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-2 h-full bg-emerald-500"></div>
-                <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    </span>
-                    1. 課本教材解析與範圍設定 (教材出題模式)
-                </h2>
-                <div class="space-y-4">
-                    <div class="border-2 border-dashed border-slate-200 hover:border-emerald-400 rounded-xl p-4 text-center transition-all cursor-pointer relative group">
-                        <input type="file" id="textbookUpload" accept=".pdf,.docx,.txt" class="absolute inset-0 opacity-0 cursor-pointer w-full">
-                        <div class="space-y-1">
-                            <svg class="w-8 h-8 text-slate-400 group-hover:text-emerald-500 mx-auto transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                            <p class="text-sm font-medium text-slate-700">點擊或拖入課本/教冊電子檔</p>
-                            <p class="text-xs text-slate-400">支援 .pdf, .docx, .txt (繁體中文版)</p>
-                        </div>
+    <!-- 主要內容區 -->
+    <main class="flex-1 overflow-y-auto no-scrollbar w-full bg-bgMain pb-20">
+        
+        <!-- ================= 視圖 A: 儀表板 Dashboard ================= -->
+        <section id="view-dashboard" class="view-section space-y-6 animate-fade-in">
+            
+            <!-- 擬真卡片展示滑動區 -->
+            <div class="w-full pt-4">
+                <div class="px-4 flex justify-between items-center mb-2">
+                    <h2 class="text-base font-bold text-textDim tracking-wider">我的卡片精選</h2>
+                    <button onclick="switchTab('cards')" class="text-sm text-accentPrimary font-bold">管理卡片 <i class="fa-solid fa-chevron-right ml-1"></i></button>
+                </div>
+                
+                <!-- 橫向滑動卡片容器 -->
+                <div id="dashboard-cards-container" class="flex gap-4 overflow-x-auto px-4 py-2 no-scrollbar scroll-smooth snap-x snap-mandatory">
+                    <!-- 動態生成卡片 -->
+                </div>
+            </div>
+
+            <!-- 卡片額度極大化進度區 -->
+            <div class="px-4">
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-base font-bold text-textMain">當前卡片回饋最佳化狀態</h3>
+                        <span id="current-card-period" class="text-sm text-textDim font-bold font-mono">結帳週期</span>
                     </div>
-                    <div id="textbookStatus" class="hidden text-xs py-2 px-3 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-700 flex items-center justify-between">
-                        <span class="truncate font-medium" id="textbookName"></span>
-                        <button onclick="clearUploadedTextbook()" class="text-emerald-500 hover:text-emerald-700 font-bold ml-2">清除</button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">起始頁碼 / 課次</label>
-                            <input type="text" id="startRange" placeholder="例如：第7課" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">結束頁碼 / 課次</label>
-                            <input type="text" id="endRange" placeholder="例如：第8課" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                        </div>
+                    
+                    <div id="rewards-limit-container" class="space-y-4">
+                        <!-- 動態生成回饋額度條 -->
                     </div>
                 </div>
             </div>
 
-            <!-- 2. 題庫匯入 -->
-            <div class="bg-white rounded-2xl shadow-md p-6 border border-slate-100 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
-                <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <span class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 5h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h3.172a1 1 0 00.707-.293l2.414-2.414a1 1 0 01.707-.293H20" /></svg>
-                    </span>
-                    2. 命題光碟題庫匯入 (優先代入模式)
-                </h2>
-                <div class="space-y-4">
-                    <div class="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-4 text-center transition-all cursor-pointer relative group">
-                        <input type="file" id="examUpload" accept=".pdf,.docx" class="absolute inset-0 opacity-0 cursor-pointer w-full">
-                        <div class="space-y-1">
-                            <svg class="w-8 h-8 text-slate-400 group-hover:text-indigo-500 mx-auto transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            <p class="text-sm font-medium text-slate-700">點擊或拖入命題光碟檔案</p>
-                            <p class="text-xs text-slate-400">支援台灣廠商出之 .docx 與 .pdf 檔案</p>
-                        </div>
-                    </div>
-                    <div id="examStatus" class="hidden text-xs py-2 px-3 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-700 flex items-center justify-between">
-                        <span class="truncate font-medium" id="examName"></span>
-                        <div class="flex items-center gap-2">
-                            <span id="examParsedCount" class="bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded-md font-bold">0 題</span>
-                            <button onclick="clearUploadedExam()" class="text-indigo-500 hover:text-indigo-700 font-bold">清除</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-md p-6 border border-slate-100 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-2 h-full bg-violet-500"></div>
-                <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <span class="p-1.5 bg-violet-50 text-violet-600 rounded-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-                    </span>
-                    3. 教學命題 parameters 與題型勾選
-                </h2>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1.5">出題總題數</label>
-                            <input type="number" id="questionCount" value="10" min="1" max="100" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-violet-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1.5">考題難易度 (課本出題專用)</label>
-                            <select id="difficultySelect" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-violet-500 bg-white">
-                                <option value="基礎">基礎 (重字音字形與直接文意)</option>
-                                <option value="中等" selected>中等 (重詞義運用與基本修辭)</option>
-                                <option value="挑戰">挑戰 (重深度文意與進階修辭)</option>
-                            </select>
-                        </div>
-                    </div>
+            <!-- 當月消費速覽指標 -->
+            <div class="px-4 grid grid-cols-2 gap-4">
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 flex flex-col justify-between shadow-sm">
+                    <span class="text-sm text-textDim font-bold mb-2">日曆月總消費</span>
                     <div>
-                        <span class="block text-xs font-bold text-slate-600 mb-2">測驗題型勾選</span>
-                        <div class="grid grid-cols-2 gap-2 text-sm">
-                            <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg border border-slate-100 cursor-pointer">
-                                <input type="checkbox" id="typePhonetics" checked class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                                <span>字音字形測驗</span>
-                            </label>
-                            <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg border border-slate-100 cursor-pointer">
-                                <input type="checkbox" id="typeIdiom" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                                <span>成語測驗</span>
-                            </label>
-                            <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg border border-slate-100 cursor-pointer">
-                                <input type="checkbox" id="typeRhetoric" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                                <span>修辭測驗</span>
-                            </label>
-                            <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg border border-slate-100 cursor-pointer">
-                                <input type="checkbox" id="typeMeaning" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                                <span>語詞意思測驗</span>
-                            </label>
-                            <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg border border-slate-100 cursor-pointer col-span-2">
-                                <input type="checkbox" id="typeComprehension" class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
-                                <span>文意理解測驗</span>
-                            </label>
-                        </div>
+                        <span id="calendar-total" class="text-3xl font-black text-textMain font-mono">NT$ 0</span>
+                        <div class="text-xs text-textDim mt-1.5 font-medium">本月 1 號至今</div>
+                    </div>
+                </div>
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 flex flex-col justify-between shadow-sm">
+                    <span class="text-sm text-textDim font-bold mb-2">最常使用支付</span>
+                    <div>
+                        <span id="top-pay-method" class="text-xl font-black text-accentPrimary truncate block">實體卡</span>
+                        <div id="top-pay-count" class="text-xs text-textDim mt-1.5 font-medium">消費 0 次</div>
                     </div>
                 </div>
             </div>
 
-            <button id="btnGenerateExam" onclick="handleGenerateAction()" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:from-indigo-700 hover:to-violet-700 transform hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2">
-                啟動 AI 智能整合出題
-            </button>
+            <!-- 快捷記帳功能 -->
+            <div class="px-4">
+                <div class="bg-gradient-to-r from-accentPrimary/10 to-accentSecondary/10 border border-borderMain rounded-2xl p-5 flex justify-between items-center shadow-md">
+                    <div class="space-y-1">
+                        <h4 class="text-base font-bold text-textMain">隨手紀錄新消費</h4>
+                        <p class="text-sm text-textDim font-medium">快速記下您剛剛刷了哪張卡與通路</p>
+                    </div>
+                    <button onclick="openAddRecordModal()" class="w-14 h-14 rounded-full bg-accentPrimary text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform flex-shrink-0">
+                        <i class="fa-solid fa-plus text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 最近 3 筆消費紀錄 -->
+            <div class="px-4">
+                <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-base font-bold text-textMain">最近刷卡紀錄</h3>
+                        <button onclick="switchTab('records')" class="text-sm text-textDim font-bold hover:text-textMain">看全部</button>
+                    </div>
+                    <div id="dashboard-recent-records" class="space-y-4">
+                        <!-- 動態生成最近消費 -->
+                    </div>
+                </div>
+            </div>
+
         </section>
 
-        <!-- 右側預覽大廳 -->
-        <section class="lg:col-span-7 flex flex-col space-y-6">
-            <div id="introPanel" class="bg-white rounded-2xl shadow-md p-6 border border-slate-100 flex-1 flex flex-col items-center justify-center text-center space-y-4">
-                <div class="p-4 bg-indigo-50 rounded-full text-indigo-600">
-                    <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364.364l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                </div>
-                <h3 class="text-xl font-black text-slate-800">準備好進行智能教學了嗎？</h3>
-                <p class="text-slate-500 max-w-md text-sm leading-relaxed">請於左側輸入 API Key 並匯入課本或題庫檔案。系統已精準鎖定題型過濾機制，並支援在暫停畫面中進行「返回大廳」的控制！</p>
+        <!-- ================= 視圖 B: 卡片管理 Cards ================= -->
+        <section id="view-cards" class="view-section hidden space-y-6 px-4 pt-4 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-textMain">信用卡清單</h2>
+                <button onclick="openCardModal()" class="px-4 py-2 rounded-xl bg-accentPrimary text-white text-sm font-bold flex items-center gap-1.5 shadow-md">
+                    <i class="fa-solid fa-plus"></i> 新增信用卡
+                </button>
             </div>
 
-            <div id="examResultPanel" class="hidden bg-white rounded-2xl shadow-md p-6 border border-slate-100 flex-1 flex flex-col space-y-6">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-100 pb-4 gap-4">
+            <div id="cards-list-container" class="space-y-5">
+                <!-- 動態生成卡片清單 -->
+            </div>
+        </section>
+
+        <!-- ================= 視圖 C: 刷卡明細 Records ================= -->
+        <section id="view-records" class="view-section hidden space-y-4 px-4 pt-4 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-textMain">刷卡明細</h2>
+                <div class="flex gap-2">
+                    <!-- 周期切換開關 -->
+                    <select id="record-period-filter" onchange="renderRecordsList()" class="bg-bgCard border border-borderMain text-sm text-textMain px-3 py-2 rounded-xl focus:outline-none focus:border-accentPrimary font-mono font-bold shadow-sm">
+                        <option value="all">全部紀錄</option>
+                        <option value="calendar">本月(日曆月)</option>
+                        <option value="billing">當前帳單期</option>
+                    </select>
+                    <button onclick="openAddRecordModal()" class="px-4 py-2 rounded-xl bg-accentPrimary text-white text-sm font-bold flex items-center gap-1.5 shadow-md">
+                        <i class="fa-solid fa-plus"></i> 記一筆
+                    </button>
+                </div>
+            </div>
+
+            <!-- 卡片篩選快捷區 (橫向滑動) -->
+            <div id="record-card-filter-container" class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                <!-- 動態生成卡片篩選按鈕 -->
+            </div>
+
+            <!-- 記錄列表 -->
+            <div id="records-list-container" class="space-y-3">
+                <!-- 動態生成刷卡明細 -->
+            </div>
+        </section>
+
+        <!-- ================= 視圖 D: 消費圖表 Charts ================= -->
+        <section id="view-charts" class="view-section hidden space-y-6 px-4 pt-4 animate-fade-in">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black text-textMain">消費分析圖表</h2>
+                <!-- 篩選器 -->
+                <select id="chart-time-filter" onchange="updateCharts()" class="bg-bgCard border border-borderMain text-sm text-textMain px-3 py-2 rounded-xl focus:outline-none font-mono font-bold shadow-sm">
+                    <option value="current-month">本月 (1號-今日)</option>
+                    <option value="last-30">最近 30 天</option>
+                    <option value="all">所有歷史紀錄</option>
+                </select>
+            </div>
+
+            <!-- 圖表卡片 A: 支付方式比例 (圓餅圖) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                <h3 class="text-base font-bold text-textMain mb-4">支付管道分佈</h3>
+                <div class="relative w-full aspect-square max-h-[320px] flex justify-center">
+                    <canvas id="payMethodChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 圖表卡片 B: 消費趨勢 analysis (折線圖) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                <h3 class="text-base font-bold text-textMain mb-4">消費趨勢 (每日累計金額)</h3>
+                <div class="relative w-full h-[240px]">
+                    <canvas id="trendLineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 圖表卡片 C: 每張卡片消費總額 (長條圖) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 shadow-sm">
+                <h3 class="text-base font-bold text-textMain mb-4">各卡消費總額</h3>
+                <div class="relative w-full h-[240px]">
+                    <canvas id="cardUsageChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 視圖 E: 設定 Settings ================= -->
+        <section id="view-settings" class="view-section hidden space-y-6 px-4 pt-4 animate-fade-in">
+            <h2 class="text-xl font-black text-textMain">設定管理</h2>
+
+            <!-- 主題顏色切換器 -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-4 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-palette text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">介面主題風格</h3>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="changeTheme('light')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-white hover:scale-105 transition shadow-sm">
+                        <div class="w-full h-9 rounded-lg bg-blue-500"></div>
+                        <span class="text-xs font-bold text-gray-800">極地純白</span>
+                    </button>
+                    <button onclick="changeTheme('dark')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#090D16] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-blue-600"></div>
+                        <span class="text-xs font-bold text-white">深邃午夜</span>
+                    </button>
+                    <button onclick="changeTheme('forest')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#061A14] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-emerald-600"></div>
+                        <span class="text-xs font-bold text-emerald-100">翡翠森林</span>
+                    </button>
+                    <button onclick="changeTheme('lavender')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#0F0B1A] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-violet-600"></div>
+                        <span class="text-xs font-bold text-violet-100">浪漫薰衣草</span>
+                    </button>
+                    <button onclick="changeTheme('ocean')" class="flex flex-col items-center gap-2.5 p-3 rounded-xl border border-borderMain bg-[#08141E] hover:scale-105 transition">
+                        <div class="w-full h-9 rounded-lg bg-sky-600"></div>
+                        <span class="text-xs font-bold text-sky-100">湛藍海洋</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 雲端同步設定 -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-4 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-cloud text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">Google Drive 雲端同步</h3>
+                </div>
+                
+                <p class="text-sm text-textDim leading-relaxed font-medium">
+                    將您的刷卡設定與紀錄加密同步至您私人的 Google 雲端硬碟。資料不會經由第三方伺服器，安全且具備高度隱私。
+                </p>
+
+                <div class="space-y-4">
                     <div>
-                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2"><span class="w-2.5 h-2.5 bg-indigo-600 rounded-full"></span>AI 智能試卷生成完畢</h3>
-                        <p class="text-xs text-slate-500 mt-1" id="examMetaText">共計 10 題</p>
+                        <label class="block text-sm font-bold text-textDim mb-1.5 font-mono">Google Client ID</label>
+                        <input type="text" id="setting-client-id" placeholder="輸入您的 Google 憑證 Client ID" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-sm font-mono text-textMain focus:outline-none focus:border-accentPrimary">
                     </div>
-                    <div class="flex flex-wrap gap-2 w-full md:w-auto">
-                        <button onclick="startQuizMission()" class="flex-1 md:flex-none px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-bold rounded-xl shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all flex items-center justify-center gap-2">直接進入答題任務</button>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5 font-mono">Google API Key</label>
+                        <input type="password" id="setting-api-key" placeholder="輸入您的 Google API 金鑰" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-sm font-mono text-textMain focus:outline-none focus:border-accentPrimary">
                     </div>
                 </div>
-                <div class="flex-1 overflow-y-auto custom-scrollbar pr-2 max-h-[500px]" id="examQuestionsPreview"></div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="saveSyncSettings()" class="flex-1 py-3 rounded-xl bg-accentPrimary text-white text-sm font-bold hover:bg-blue-600 transition shadow-md">
+                        儲存金鑰並連結
+                    </button>
+                    <button id="google-sync-btn" onclick="syncWithGoogle()" class="px-5 py-3 rounded-xl bg-bgMain border border-borderMain text-textDim text-sm font-bold hover:bg-bgCard transition flex items-center gap-2" disabled>
+                        <i class="fa-solid fa-sync"></i> 立即同步
+                    </button>
+                </div>
+            </div>
+
+            <!-- 自訂消費管道設定 -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-3 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-wallet text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">自訂「其他」消費方式</h3>
+                </div>
+                <p class="text-sm text-textDim font-medium">當您選擇其他消費方式時，會自動帶入此設定的名稱：</p>
+                <input type="text" id="setting-other-pay-name" placeholder="例如：美團支付、WeChat Pay" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-sm text-textMain focus:outline-none focus:border-accentPrimary">
+            </div>
+
+            <!-- 資料備份與清除 (最純粹的 JSON 手動匯出入) -->
+            <div class="bg-bgCard border border-borderMain rounded-2xl p-5 space-y-3 shadow-sm">
+                <div class="flex items-center space-x-2.5 pb-2 border-b border-borderMain">
+                    <i class="fa-solid fa-file-export text-accentPrimary text-lg"></i>
+                    <h3 class="text-base font-bold text-textMain">手動本機資料備份</h3>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="exportData()" class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-download"></i> 匯出 JSON
+                    </button>
+                    <label class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer text-center shadow-sm">
+                        <i class="fa-solid fa-upload"></i> 匯入 JSON
+                        <input type="file" id="import-file-input" onchange="importData(event)" class="hidden" accept=".json">
+                    </label>
+                </div>
+                <button onclick="confirmClearData()" class="w-full py-3 rounded-xl bg-red-950/40 border border-red-900/40 text-red-400 text-sm font-bold hover:bg-red-900/30 transition">
+                    清除本機所有資料
+                </button>
+            </div>
+            
+            <div class="text-center text-xs text-textDim font-mono">
+                CardControl Version 1.3.1 (Dual-Sync Master)
             </div>
         </section>
     </main>
 
-    <div id="quizModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div id="quizConfigScreen" class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 p-6 space-y-6">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                <h3 class="text-lg font-black text-slate-800">線上答題任務設定</h3>
-                <button onclick="closeQuizModal()" class="text-slate-400 hover:text-slate-600 transition-colors">✕</button>
+    <!-- 底部固定選單列 -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-bgCard/90 backdrop-blur-md border-t border-borderMain px-2 py-2 flex justify-around items-center z-40 pb-safe shadow-lg">
+        <button id="nav-dashboard" onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1.5 text-accentPrimary transition-colors w-16">
+            <i class="fa-solid fa-chart-simple text-xl"></i>
+            <span class="text-xs font-bold">總覽</span>
+        </button>
+        <button id="nav-cards" onclick="switchTab('cards')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-credit-card text-xl"></i>
+            <span class="text-xs font-bold">卡片</span>
+        </button>
+        <button id="nav-records" onclick="switchTab('records')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-list-ul text-xl"></i>
+            <span class="text-xs font-bold">明細</span>
+        </button>
+        <button id="nav-charts" onclick="switchTab('charts')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-chart-pie text-xl"></i>
+            <span class="text-xs font-bold">分析</span>
+        </button>
+        <button id="nav-settings" onclick="switchTab('settings')" class="flex flex-col items-center gap-1.5 text-textDim hover:text-textMain transition-colors w-16">
+            <i class="fa-solid fa-gear text-xl"></i>
+            <span class="text-xs font-bold">設定</span>
+        </button>
+    </nav>
+
+    <!-- =================================彈出模態視窗組 (Modals)================================= -->
+
+    <!-- 新增/編輯信用卡 Modal -->
+    <div id="modal-card" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-bgCard border border-borderMain rounded-3xl w-full max-w-md overflow-hidden animate-slide-up shadow-2xl">
+            <div class="px-6 py-4 border-b border-borderMain flex justify-between items-center">
+                <h3 id="card-modal-title" class="text-lg font-bold text-textMain">新增信用卡</h3>
+                <button onclick="closeCardModal()" class="text-textDim hover:text-textMain"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1.5">單題答題時間</label>
-                    <div class="flex gap-2">
-                        <select id="quizTimerConfig" onchange="toggleCustomTimerInput(this.value)" class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                            <option value="0">不限時間</option>
-                            <option value="10">10 秒</option>
-                            <option value="15">15 秒</option>
-                            <option value="30" selected>30 秒</option>
-                            <option value="60">60 秒</option>
-                            <option value="custom">自訂秒數</option>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="card-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">銀行名稱</label>
+                        <input type="text" id="card-bank" placeholder="例如：國泰世華" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">卡片名稱</label>
+                        <input type="text" id="card-name" placeholder="例如：CUBE卡" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">卡號後四碼</label>
+                        <input type="text" id="card-last-four" maxlength="4" placeholder="1234" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">卡片到期日 (MM/YY)</label>
+                        <input type="text" id="card-expiry" placeholder="12/29" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">結帳週期類型</label>
+                        <select id="card-billing-type" onchange="toggleBillingDayField()" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                            <option value="calendar">整個月曆月 (1-31日)</option>
+                            <option value="billingDate">依帳單月結日</option>
                         </select>
-                        <input type="number" id="customTimerInput" placeholder="輸入秒數" class="hidden w-28 px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" min="1">
+                    </div>
+                    <div id="card-billing-day-wrapper" class="hidden">
+                        <label class="block text-sm font-bold text-textDim mb-1.5">帳單結帳日</label>
+                        <input type="number" id="card-billing-day" min="1" max="31" placeholder="每月的幾號" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
                     </div>
                 </div>
-                <div class="space-y-3">
-                    <label class="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl border border-slate-100 cursor-pointer">
-                        <input type="checkbox" id="quizShuffleQs" checked class="rounded text-indigo-600 focus:ring-indigo-500 w-5 h-5">
-                        <span class="text-sm font-medium text-slate-800">隨機打亂題目順序</span>
+                <div>
+                    <label class="block text-sm font-bold text-textDim mb-1.5 flex justify-between">
+                        <span>建議消費上限 (NT$)</span>
+                        <span class="text-xs text-accentPrimary">最高回饋臨界金額</span>
                     </label>
-                    <label class="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl border border-slate-100 cursor-pointer">
-                        <input type="checkbox" id="quizShuffleOpts" checked class="rounded text-indigo-600 focus:ring-indigo-500 w-5 h-5">
-                        <span class="text-sm font-medium text-slate-800">隨機打亂選項順序 (①~④)</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl border border-slate-100 cursor-pointer">
-                        <input type="checkbox" id="quizRepeatWrong" class="rounded text-indigo-600 focus:ring-indigo-500 w-5 h-5">
-                        <span class="text-sm font-medium text-slate-800">開啟錯題重複複習模式</span>
-                    </label>
-                    <label class="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-xl border border-slate-100 cursor-pointer">
-                        <input type="checkbox" id="quizAllowRepeatHistory" checked class="rounded text-indigo-600 focus:ring-indigo-500 w-5 h-5">
-                        <div><span class="block text-sm font-medium text-slate-800">再次出題時允許重複出已出過的題目</span></div>
-                    </label>
+                    <input type="number" id="card-recommended-limit" placeholder="例如：10000" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
                 </div>
-            </div>
-            <button onclick="launchQuizPlay()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2">開始挑戰答題任務</button>
-        </div>
-
-        <!-- 答題進行中面板 -->
-        <div id="quizPlayScreen" class="hidden bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 p-6 flex flex-col h-[90vh] md:h-auto max-h-[750px] relative overflow-hidden">
-            <!-- 暫停畫面 -->
-            <div id="quizPauseOverlay" class="hidden absolute inset-0 z-30 bg-slate-900/40 backdrop-blur-xl flex flex-col items-center justify-center space-y-4">
-                <h3 class="text-xl font-black text-white tracking-wider">挑戰暫停中</h3>
-                <p class="text-xs text-slate-200 mb-2">題目內容已安全隱蔽，準備好後即可繼續答題</p>
-                <button onclick="resumeQuizPlay()" class="py-2.5 w-48 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold rounded-xl shadow-md transform active:scale-95 transition-all">繼續作答</button>
-                <button onclick="exitQuizToHome()" class="py-2.5 w-48 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl border border-slate-700 transform active:scale-95 transition-all">返回大廳首頁</button>
-            </div>
-
-            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-sm font-black text-slate-500" id="quizProgressText">第 1 題</span>
-                    <button onclick="speakCurrentQuestion()" class="p-1.5 bg-slate-100 rounded-full">🗣️ 朗讀題目</button>
-                    <button onclick="pauseQuizPlay()" class="p-1.5 bg-slate-100 rounded-full">⏸️ 暫停</button>
-                </div>
-                <div id="quizTimerContainer" class="flex items-center gap-2">
-                    <span class="text-sm font-bold text-slate-500 font-mono" id="quizTimerText">30s</span>
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto custom-scrollbar my-6 space-y-6">
-                <span id="quizQuestionTag" class="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-md"></span>
-                <h4 id="quizQuestionBody" class="text-lg md:text-xl font-bold text-slate-800 leading-relaxed"></h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="quizOptionsGrid"></div>
-            </div>
-
-            <div id="quizFeedbackArea" class="hidden border-t border-slate-100 pt-4 space-y-3">
-                <div class="flex items-center gap-2 font-bold" id="quizFeedbackStatus"></div>
-                <p class="text-sm text-slate-600 leading-relaxed" id="quizFeedbackExplain"></p>
-                <button id="btnQuizNext" onclick="handleQuizNextQuestion()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">下一題</button>
-            </div>
-        </div>
-
-        <div id="quizScoreScreen" class="hidden bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 p-6 flex flex-col h-[90vh] max-h-[700px] overflow-hidden">
-            <h3 class="text-xl font-black text-slate-800 text-center pb-3 border-b border-slate-100">🏆 答題任務挑戰結果與錯題檢討</h3>
-            
-            <div class="flex-1 overflow-y-auto custom-scrollbar my-4 pr-1 space-y-6">
-                <!-- 成績總覽 -->
-                <div class="grid grid-cols-3 gap-3 text-center">
-                    <div class="bg-indigo-50 rounded-2xl p-3 border border-indigo-100">
-                        <span class="block text-slate-400 text-xs font-medium">總得分</span>
-                        <span class="text-2xl font-black text-indigo-600" id="quizScoreText">0</span><span class="text-xs text-indigo-400"> 分</span>
-                    </div>
-                    <div class="bg-emerald-50 rounded-2xl p-3 border border-emerald-100">
-                        <span class="block text-slate-400 text-xs font-medium">答對題數</span>
-                        <span class="text-2xl font-black text-emerald-600" id="quizCorrectCountText">0 題</span>
-                    </div>
-                    <div class="bg-amber-50 rounded-2xl p-3 border border-amber-100">
-                        <span class="block text-slate-400 text-xs font-medium">答錯題數</span>
-                        <span class="text-2xl font-black text-rose-600" id="quizWrongCountText">0 題</span>
+                <div>
+                    <label class="block text-sm font-bold text-textDim mb-2.5">卡面外觀配色</label>
+                    <div class="flex gap-2 justify-between">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-gold" class="peer hidden" checked>
+                            <div class="w-9 h-9 rounded-full card-gold border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-blue" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-blue border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-purple" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-purple border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-green" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-green border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-rose" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-rose border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="card-color" value="card-dark" class="peer hidden">
+                            <div class="w-9 h-9 rounded-full card-dark border-2 border-transparent peer-checked:border-white shadow-md"></div>
+                        </label>
                     </div>
                 </div>
-
-                <!-- 錯題列表回顧 -->
-                <div class="space-y-3">
-                    <h4 class="text-sm font-bold text-slate-700 flex items-center gap-1">
-                        <span class="w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
-                        答錯題目檢討列表
-                    </h4>
-                    <div id="quizWrongQuestionsContainer" class="space-y-3">
-                        <!-- 動態載入錯題 -->
-                    </div>
+                <div class="pt-4 flex gap-3">
+                    <button onclick="closeCardModal()" class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-base font-bold transition">取消</button>
+                    <button onclick="saveCard()" class="flex-1 py-3 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-base font-bold transition shadow-md">儲存卡片</button>
                 </div>
-            </div>
-
-            <!-- 控制按鈕 -->
-            <div class="flex gap-3 pt-3 border-t border-slate-100">
-                <button onclick="launchQuizPlay()" class="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">再做一次</button>
-                <button onclick="closeQuizModal()" class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all active:scale-95">回到首頁</button>
             </div>
         </div>
     </div>
 
-    <!-- Loading 與 Toast -->
-    <div id="loadingOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center space-y-4">
-        <div class="rounded-full border-4 border-slate-300 border-t-indigo-600 animate-spin w-12 h-12"></div>
-        <p class="text-white font-bold text-sm" id="loadingText"></p>
-    </div>
-    <div id="toastNotification" class="fixed bottom-5 right-5 z-50 bg-slate-800 text-white text-sm py-3 px-5 rounded-xl shadow-lg flex items-center gap-2 transition-all opacity-0">
-        <span id="toastText"></span>
+    <!-- 新增/編輯消費紀錄 Modal -->
+    <div id="modal-record" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-bgCard border border-borderMain rounded-3xl w-full max-w-md overflow-hidden animate-slide-up shadow-2xl">
+            <div class="px-6 py-4 border-b border-borderMain flex justify-between items-center">
+                <h3 id="record-modal-title" class="text-lg font-bold text-textMain">記錄一筆刷卡</h3>
+                <button onclick="closeRecordModal()" class="text-textDim hover:text-textMain"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[85vh] overflow-y-auto no-scrollbar">
+                <input type="hidden" id="record-id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">選擇卡片</label>
+                        <select id="record-card" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                            <!-- 動態載入卡片清單 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費金額 (NT$)</label>
+                        <input type="number" id="record-amount" placeholder="金額" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費日期</label>
+                        <input type="date" id="record-date" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費時間</label>
+                        <input type="time" id="record-time" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base font-mono text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">消費通路 / 商家</label>
+                        <input type="text" id="record-channel" placeholder="example：7-11、新光三越" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-textDim mb-1.5">品項說明 / 備註</label>
+                        <input type="text" id="record-item" placeholder="例如：午餐、咖啡" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-textDim mb-1.5">消費支付方式</label>
+                    <select id="record-pay-method" onchange="togglePayMethodOtherField()" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary font-bold">
+                        <option value="實體卡">實體卡</option>
+                        <option value="網路刷卡">網路刷卡</option>
+                        <option value="Samsung Pay">Samsung Pay</option>
+                        <option value="Google Pay">Google Pay</option>
+                        <option value="Line Pay">Line Pay</option>
+                        <option value="街口支付">街口支付</option>
+                        <option value="全支付">全支付</option>
+                        <option value="台灣Pay">台灣Pay</option>
+                        <option value="iPass Money">iPass Money</option>
+                        <option value="Hami Pay">Hami Pay</option>
+                        <option value="全盈+PAY">全盈+PAY</option>
+                        <option value="Pi拍錢包">Pi錢包</option>
+                        <option value="悠遊付">悠遊付</option>
+                        <option value="icash Pay">icash Pay</option>
+                        <option value="其他">其他 (可於下方自訂名稱)</option>
+                    </select>
+                </div>
+
+                <div id="record-pay-other-wrapper" class="hidden">
+                    <label class="block text-sm font-bold text-textDim mb-1.5">自訂「其他」支付名稱</label>
+                    <input type="text" id="record-pay-other" placeholder="自訂之支付名稱" class="w-full bg-bgMain border border-borderMain rounded-xl px-4 py-2.5 text-base text-textMain focus:outline-none focus:border-accentPrimary">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button onclick="closeRecordModal()" class="flex-1 py-3 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-base font-bold transition">取消</button>
+                    <button onclick="saveRecord()" class="flex-1 py-3 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-base font-bold transition shadow-md">儲存紀錄</button>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- 自訂提示對話視窗 (Toast/Alert) -->
+    <div id="toast-container" class="fixed bottom-24 left-4 right-4 z-50 pointer-events-none flex flex-col items-center gap-2">
+        <!-- 訊息會動態生成並消失 -->
+    </div>
+
+    <!-- 確認對話框 (Custom Confirm) -->
+    <div id="modal-confirm" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-bgCard border border-borderMain rounded-3xl w-full max-w-sm overflow-hidden p-6 shadow-2xl space-y-4">
+            <h3 id="confirm-title" class="text-base font-bold text-textMain">確定執行此操作？</h3>
+            <p id="confirm-msg" class="text-sm text-textDim leading-relaxed font-medium"></p>
+            <div class="flex gap-2">
+                <button id="confirm-cancel" class="flex-1 py-2.5 rounded-xl bg-bgMain border border-borderMain hover:bg-bgCard text-textMain text-sm font-bold transition">取消</button>
+                <!-- 修正點：添加 id="confirm-ok" 並移除無效的 inline onclick -->
+                <button id="confirm-ok" class="flex-1 py-2.5 rounded-xl bg-accentPrimary hover:bg-blue-600 text-white text-sm font-bold transition">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================JavaScript 核心程式碼================================= -->
     <script>
-        let G_apiKey = "", G_textbookText = "";
-        let G_examQuestions = [], G_parsedExamQuestions = [], G_seenQuestionTexts = new Set();
-        let G_quizCurrentIndex = 0, G_quizQuestions = [], G_quizTimerValue = 0, G_quizTimerInterval = null, G_quizWrongList = [], G_quizCurrentMapping = {};
-        
-        // 用作錯題統計的暫存數據
-        let G_quizScoreData = { score: 0, correct: 0, wrong: 0, wrongQuestionsList: [] };
-        let G_quizAnswered = false; // 強制單次選擇鎖定變數，防學生重複點選
+        // --- 核心資料狀態管理 ---
+        let cards = [];
+        let records = [];
+        let currentTab = 'dashboard';
+        let currentRecordCardFilter = 'all';
 
-        // 台灣教育部標準字音精密校正映射表 (100% 覆寫，修正 噸、擅、哲 等偏誤，加入垃圾與垃圾同音字校驗)
-        const BOPOMOFO_MAP = {
-            "噸": "ㄉㄨㄣˋ", "擅": "ㄕㄢˋ", "哲": "ㄓㄜˊ", "緻": "ㄓˋ",
-            "罐": "ㄍㄨㄢˋ", "冠": "ㄍㄨㄢ", "灌": "ㄍㄨㄢˋ", "貫": "ㄍㄨㄢˋ",
-            "好": "ㄏㄠˋ", "惡": "ㄨˋ", "逸": "ㄧˋ", "勞": "ㄌㄠˊ",
-            "傍": "ㄅㄤ", "晚": "ㄨㄢˇ", "水": "ㄕㄨㄟˇ", "礁": "ㄐㄧㄠ",
-            "焦": "ㄐㄧㄠ", "筏": "ㄈㄚˊ", "伐": "ㄈㄚˊ", "捏": "ㄋㄧㄝ",
-            "爐": "ㄌㄨˊ", "考": "ㄎㄠˇ", "烤": "ㄎㄠˇ", "復": "ㄈㄨˋ",
-            "複": "ㄈㄨˋ", "腹": "ㄈㄨˋ",
-            "垃": "ㄌㄜˋ", "圾": "ㄙㄜˋ", "垃圾": "ㄌㄜˋ ㄙㄜˋ"
+        // Google Drive API 參數
+        let isGoogleAuthInitialized = false;
+        let googleTokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let googleAccessToken = null;
+
+        // 圖表物件參照
+        let payMethodChartInstance = null;
+        let trendLineChartInstance = null;
+        let cardUsageChartInstance = null;
+
+        // 預設資料初始化
+        const defaultData = {
+            cards: [
+                { id: 'card-1', bank: '國泰世華', name: 'CUBE 卡', lastFour: '8839', expiry: '12/28', billingCycleType: 'calendar', billingDay: 1, recommendedLimit: 20000, color: 'card-rose' },
+                { id: 'card-2', bank: '台新銀行', name: '玫瑰 Giving 卡', lastFour: '5201', expiry: '06/29', billingCycleType: 'billingDate', billingDay: 15, recommendedLimit: 15000, color: 'card-gold' },
+                { id: 'card-3', bank: '富邦銀行', name: 'J卡', lastFour: '9012', expiry: '09/27', billingCycleType: 'calendar', billingDay: 1, recommendedLimit: 10000, color: 'card-blue' }
+            ],
+            records: [
+                { id: 'r-1', cardId: 'card-1', date: getRelativeDate(0), time: '12:30', channel: '7-11便利商店', item: '經典拿鐵與御飯糰', amount: 95, payMethod: 'Line Pay', payMethodOther: '' },
+                { id: 'r-2', cardId: 'card-2', date: getRelativeDate(-2), time: '19:45', channel: '新光三越', item: '春季外套', amount: 3200, payMethod: '實體卡', payMethodOther: '' },
+                { id: 'r-3', cardId: 'card-3', date: getRelativeDate(-5), time: '15:10', channel: '星巴克', item: '特大杯美式', amount: 135, payMethod: 'Google Pay', payMethodOther: '' },
+                { id: 'r-4', cardId: 'card-1', date: getRelativeDate(-12), time: '21:00', channel: 'Uber Eats', item: '晚餐外送', amount: 450, payMethod: '網路刷卡', payMethodOther: '' }
+            ]
         };
 
-        // 頁面加載完成時，自動載入本機永久記住的 API Key
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedKey = localStorage.getItem('gemini_api_key');
-            if (savedKey) {
-                G_apiKey = savedKey;
-                document.getElementById('apiKeyInput').value = savedKey;
-            }
-        });
-
-        function saveApiKeyToLocal(value) {
-            G_apiKey = value.trim();
-            localStorage.setItem('gemini_api_key', G_apiKey);
+        // 輔助函式：取得今日或相對日期字串 YYYY-MM-DD
+        function getRelativeDate(daysOffset) {
+            const date = new Date();
+            date.setDate(date.getDate() + daysOffset);
+            return date.toISOString().split('T')[0];
         }
 
-        function showToast(text) {
-            const toast = document.getElementById('toastNotification');
-            document.getElementById('toastText').textContent = text;
-            toast.style.opacity = "1";
-            setTimeout(() => { toast.style.opacity = "0"; }, 4000);
-        }
-        
-        function toggleLoading(show, text) {
-            const overlay = document.getElementById('loadingOverlay');
-            document.getElementById('loadingText').textContent = text;
-            show ? overlay.classList.remove('hidden') : overlay.classList.add('hidden');
-        }
-        
-        function getApiKey() { return document.getElementById('apiKeyInput').value.trim() || G_apiKey; }
+        // --- 載入本機與雲端設定資料 ---
+        window.onload = function() {
+            // 載入主題，預設修改為 'light' (極地純白)
+            const savedTheme = localStorage.getItem('cc_theme') || 'light';
+            changeTheme(savedTheme, false);
 
-        function toggleCustomTimerInput(val) {
-            const input = document.getElementById('customTimerInput');
-            if (val === "custom") {
-                input.classList.remove('hidden');
+            // 從 LocalStorage 載入資料
+            const storedCards = localStorage.getItem('cc_cards');
+            const storedRecords = localStorage.getItem('cc_records');
+            const storedOtherPay = localStorage.getItem('cc_other_pay');
+            
+            // 雲端同步設定載入
+            const storedClientId = localStorage.getItem('cc_google_client_id');
+            const storedApiKey = localStorage.getItem('cc_google_api_key');
+            
+            if (storedCards && storedRecords) {
+                cards = JSON.parse(storedCards);
+                records = JSON.parse(storedRecords);
             } else {
-                input.classList.add('hidden');
+                // 【核心修正】：全新裝置載入預設範例，但強制將最後更新時間設為 1970 歷史起點
+                cards = defaultData.cards;
+                records = defaultData.records;
+                localStorage.setItem('cc_cards', JSON.stringify(cards));
+                localStorage.setItem('cc_records', JSON.stringify(records));
+                localStorage.setItem('cc_other_pay', '街口支付');
+                localStorage.setItem('cc_last_local_update', new Date(0).toISOString()); // 1970-01-01T00:00:00.000Z
+            }
+
+            if (storedOtherPay) {
+                document.getElementById('setting-other-pay-name').value = storedOtherPay;
+            } else {
+                document.getElementById('setting-other-pay-name').value = '街口支付'; // 預設自訂
+            }
+
+            if (storedClientId) document.getElementById('setting-client-id').value = storedClientId;
+            if (storedApiKey) document.getElementById('setting-api-key').value = storedApiKey;
+
+            // 初始畫面渲染
+            initApp();
+            updateSyncBadge('disconnected');
+            
+            // 載入 Google Drive SDK
+            try {
+                gapiLoad();
+                gisLoad();
+            } catch(e) {
+                console.log("Google Drive 模組載入失敗，採用本機儲存模式。");
+            }
+        };
+
+        function saveToLocal() {
+            localStorage.setItem('cc_cards', JSON.stringify(cards));
+            localStorage.setItem('cc_records', JSON.stringify(records));
+            localStorage.setItem('cc_other_pay', document.getElementById('setting-other-pay-name').value);
+            localStorage.setItem('cc_last_local_update', new Date().toISOString());
+        }
+
+        function initApp() {
+            renderDashboard();
+            renderCardsList();
+            renderRecordsList();
+            updateCharts();
+            populateCardSelectDropdowns();
+        }
+
+        // --- 視圖切換 Tab Switching ---
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // 切換視圖區顯示狀態
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+
+            // 調整底部導覽列樣式
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('text-accentPrimary');
+                btn.classList.add('text-textDim');
+            });
+            document.getElementById(`nav-${tabName}`).classList.remove('text-textDim');
+            document.getElementById(`nav-${tabName}`).classList.add('text-accentPrimary');
+
+            // 觸發重新繪製與資料重算
+            if (tabName === 'dashboard') {
+                renderDashboard();
+            } else if (tabName === 'records') {
+                renderRecordsList();
+            } else if (tabName === 'charts') {
+                setTimeout(() => { updateCharts(); }, 150);
             }
         }
 
-        document.getElementById('textbookUpload').addEventListener('change', async function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            toggleLoading(true, "正在讀取電子教材內容...");
-            try {
-                if (file.name.endsWith('.pdf')) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-                    const pdf = await loadingTask.promise;
-                    let fullText = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        fullText += textContent.items.map(item => item.str).join(' ') + "\n";
-                    }
-                    G_textbookText = fullText;
-                } else if (file.name.endsWith('.docx')) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-                    G_textbookText = result.value;
-                } else {
-                    G_textbookText = await file.text();
-                }
-                document.getElementById('textbookName').textContent = file.name;
-                document.getElementById('textbookStatus').classList.remove('hidden');
-                showToast("教材課本讀取成功！");
-            } catch (err) { showToast("教材讀取失敗，請確認檔案。"); } finally { toggleLoading(false); }
-        });
-
-        document.getElementById('examUpload').addEventListener('change', async function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            if (!getApiKey()) { showToast("請先輸入 API Key"); e.target.value = ''; return; }
+        // --- 客製化主題切換 ---
+        function changeTheme(themeName, save = true) {
+            document.body.setAttribute('data-theme', themeName);
+            if (save) {
+                localStorage.setItem('cc_theme', themeName);
+                showToast(`已切換至 ${getThemeNameDisplay(themeName)} 主題`, 'success');
+            }
             
-            toggleLoading(true, "正在智能提取原始文件文字...");
-            try {
-                let rawText = "";
-                if (file.name.endsWith('.pdf')) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-                    const pdf = await loadingTask.promise;
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        rawText += textContent.items.map(item => item.str).join(' ') + "\n";
-                    }
-                } else if (file.name.endsWith('.docx')) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const zip = await JSZip.loadAsync(arrayBuffer);
-                    const docXmlText = await zip.file("word/document.xml").async("text");
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(docXmlText, "text/xml");
-                    
-                    const paragraphs = xmlDoc.getElementsByTagName("*");
-                    for (let node of paragraphs) {
-                        if (node.localName === "p") {
-                            let pText = "";
-                            const childNodes = node.getElementsByTagName("*");
-                            for (let child of childNodes) {
-                                if (child.localName === "ruby") {
-                                    const baseNodes = child.getElementsByTagName("*");
-                                    let baseStr = "", rtStr = "";
-                                    for (let n of baseNodes) {
-                                        if (n.localName === "rubyBase") {
-                                            const tNodes = n.getElementsByTagName("*");
-                                            for (let t of tNodes) { if (t.localName === "t") baseStr += t.textContent; }
-                                        }
-                                        if (n.localName === "rt") {
-                                            const tNodes = n.getElementsByTagName("*");
-                                            for (let t of tNodes) { if (t.localName === "t") rtStr += t.textContent; }
-                                        }
-                                    }
-                                    if (baseStr) { pText += rtStr ? `${baseStr}(${rtStr})` : baseStr; }
-                                } else if (child.localName === "t") {
-                                    let parent = child.parentNode; let isInRuby = false;
-                                    while (parent) {
-                                        if (parent.localName === "ruby" || parent.localName === "rt" || parent.localName === "rubyBase") { isInRuby = true; break; }
-                                        parent = parent.parentNode;
-                                    }
-                                    if (!isInRuby) { pText += child.textContent; }
-                                }
-                            }
-                            if (pText.trim()) rawText += pText + "\n";
-                        }
-                    }
-                }
-
-                if (!rawText.trim()) { throw new Error("提取文字為空"); }
-
-                // 前端分批切片，避免大型題庫過載 API
-                const lines = rawText.split('\n').filter(l => l.trim().length > 0);
-                let textChunks = []; let currentChunk = "";
-                for (let line of lines) {
-                    currentChunk += line + "\n";
-                    if (currentChunk.length > 5000) { textChunks.push(currentChunk); currentChunk = ""; }
-                }
-                if (currentChunk) textChunks.push(currentChunk);
-
-                G_parsedExamQuestions = [];
-                for (let i = 0; i < textChunks.length; i++) {
-                    toggleLoading(true, `正在解析精準題庫 (進度: ${Math.round(((i+1)/textChunks.length)*100)}%)...`);
-                    const chunkQs = await parseExamChunkWithAI(textChunks[i], getApiKey());
-                    if (chunkQs && chunkQs.length > 0) {
-                        G_parsedExamQuestions = G_parsedExamQuestions.concat(chunkQs);
-                        document.getElementById('examParsedCount').textContent = `${G_parsedExamQuestions.length} 題`;
-                    }
-                    if (i < textChunks.length - 1) { await new Promise(resolve => setTimeout(resolve, 1500)); }
-                }
-                document.getElementById('examName').textContent = file.name;
-                document.getElementById('examStatus').classList.remove('hidden');
-                showToast(`大題庫匯入完畢，成功導入 ${G_parsedExamQuestions.length} 題！`);
-            } catch (err) { showToast("題庫內文提取或解析失敗"); } finally { toggleLoading(false); }
-        });
-
-        async function parseExamChunkWithAI(textSegment, apiKey) {
-            const systemPrompt = `你是一個專業的台灣國小國語科結構化助手。請將傳入的考題文本片段轉為標準 JSON 陣列。
-【100% 教學現場原樣還原規範】：
-1. 題幹與選項字體字形必須與原始題庫100%完全原樣一致。原本是國字（如：助、赤、自、緻）就必須絕對維持國字，不准擅自轉為注音！
-2. 只有當大題分類是選錯別字、寫國字（字形題）時，才需在題幹中將答案字挖空為「□」。
-3. 如果是字音題（注音題，如問：『緻』的注音為何？或問某組字音是否相同？），題幹與選項中的國字必須完美完整保留，絕對不准用『□』遮蔽！其 category 必須精確標註為 "字音字形"。
-JSON結構：
-[
-  {
-    "category": "字音字形/基本修辭/文意理解/字詞義及運用",
-    "question": "完整題目敘述",
-    "options": ["選項1","選項2","選項3","選項4"],
-    "answer": 1~4的數字,
-    "explain": "台灣標準注音詳解說明"
-  }
-]`;
-            const payload = {
-                contents: [{ parts: [{ text: textSegment }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: { responseMimeType: "application/json" }
-            };
-            const data = await callGeminiAPI(payload, apiKey);
-            try { 
-                let list = JSON.parse(data.candidates[0].content.parts[0].text); 
-                return list.map(q => {
-                    if (q.category === "字音字形") {
-                        let answerText = q.options[q.answer - 1];
-                        if (answerText && q.question.includes(`「${answerText}」`)) {
-                            let bopomofoText = BOPOMOFO_MAP[answerText] || "　";
-                            q.question = q.question.replace(`「${answerText}」`, `「${bopomofoText}」`);
-                        }
-                    }
-                    return q;
-                });
-            } catch(e) { return []; }
+            // 同步更新 Chart.js 顏色配置並重畫
+            updateChartColorsForTheme();
         }
 
-        async function handleGenerateAction() {
-            if (!getApiKey()) { showToast("請先輸入 API Key"); return; }
-            const targetCount = parseInt(document.getElementById('questionCount').value) || 10;
-            const difficulty = document.getElementById('difficultySelect').value;
-            
-            // 嚴格篩選出勾選的題型 (不允許任何未勾選的題型混入！)
-            const enabledCategories = [];
-            if (document.getElementById('typePhonetics').checked) enabledCategories.push("字音字形");
-            if (document.getElementById('typeIdiom').checked) enabledCategories.push("成語測驗", "生字延伸成語");
-            if (document.getElementById('typeRhetoric').checked) enabledCategories.push("修辭測驗", "基本修辭");
-            if (document.getElementById('typeMeaning').checked) enabledCategories.push("語詞意思測驗", "字詞義及運用", "文字語詞意思測驗");
-            if (document.getElementById('typeComprehension').checked) enabledCategories.push("文意理解測驗", "文意理解");
+        function getThemeNameDisplay(id) {
+            const names = { 'dark': '深邃午夜', 'light': '極地純白', 'forest': '翡翠森林', 'lavender': '浪漫薰衣草', 'ocean': '湛藍海洋' };
+            return names[id] || id;
+        }
 
-            if (enabledCategories.length === 0) {
-                showToast("請至少勾選一種欲測驗的題型！");
+        function updateChartColorsForTheme() {
+            const style = getComputedStyle(document.body);
+            const textColor = style.getPropertyValue('--text-dim').trim();
+            const borderColor = style.getPropertyValue('--border-main').trim();
+            
+            if (typeof Chart !== 'undefined') {
+                Chart.defaults.color = textColor;
+                Chart.defaults.borderColor = borderColor;
+            }
+            
+            if (currentTab === 'charts') {
+                updateCharts();
+            }
+        }
+
+        // --- 客製化 Toast 訊息 (取代 Alert) ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let iconClass = 'fa-info-circle text-blue-500';
+            let borderClass = 'border-blue-900/50';
+            if (type === 'success') {
+                iconClass = 'fa-circle-check text-green-500';
+                borderClass = 'border-green-900/50';
+            } else if (type === 'error') {
+                iconClass = 'fa-circle-exclamation text-red-500';
+                borderClass = 'border-red-900/50';
+            } else if (type === 'warn') {
+                iconClass = 'fa-triangle-exclamation text-amber-500';
+                borderClass = 'border-amber-900/50';
+            }
+
+            toast.className = `flex items-center space-x-3 bg-bgCard/95 border ${borderClass} px-5 py-4 rounded-2xl shadow-xl w-full max-w-sm pointer-events-auto transition-all duration-300 transform translate-y-4 opacity-0`;
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} text-lg flex-shrink-0"></i>
+                <span class="text-sm font-bold text-textMain flex-1 leading-relaxed">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-10px]', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // --- 客製化確認框 (取代 Confirm) ---
+        function showConfirm(title, message, onOk) {
+            const modal = document.getElementById('modal-confirm');
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-msg').innerText = message;
+            
+            modal.classList.remove('hidden');
+            
+            document.getElementById('confirm-ok').onclick = function() {
+                onOk();
+                modal.classList.add('hidden');
+            };
+            document.getElementById('confirm-cancel').onclick = function() {
+                modal.classList.add('hidden');
+            };
+        }
+
+        // --- 計算卡片在特定期間的消費總額 ---
+        function calculateCardSpent(card, mode = 'billing') {
+            let total = 0;
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            
+            let startDate, endDate;
+
+            if (mode === 'calendar' || card.billingCycleType === 'calendar') {
+                startDate = new Date(currentYear, currentMonth, 1);
+                endDate = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+            } else {
+                const billDay = parseInt(card.billingDay);
+                const currentDay = now.getDate();
+
+                if (currentDay >= billDay) {
+                    startDate = new Date(currentYear, currentMonth, billDay);
+                    endDate = new Date(currentYear, currentMonth + 1, billDay - 1, 23, 59, 59);
+                } else {
+                    startDate = new Date(currentYear, currentMonth - 1, billDay);
+                    endDate = new Date(currentYear, currentMonth, billDay - 1, 23, 59, 59);
+                }
+            }
+
+            records.forEach(r => {
+                if (r.cardId === card.id) {
+                    const rDate = new Date(r.date);
+                    if (rDate >= startDate && rDate <= endDate) {
+                        total += parseFloat(r.amount || 0);
+                    }
+                }
+            });
+
+            return {
+                total,
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0]
+            };
+        }
+
+        // ================================= A: 儀表板視覺渲染 =================================
+        function renderDashboard() {
+            const container = document.getElementById('dashboard-cards-container');
+            const limitsContainer = document.getElementById('rewards-limit-container');
+            
+            container.innerHTML = '';
+            limitsContainer.innerHTML = '';
+
+            if (cards.length === 0) {
+                container.innerHTML = `
+                    <div onclick="switchTab('cards')" class="w-full bg-bgCard border-2 border-dashed border-borderMain rounded-3xl p-6 text-center text-textDim cursor-pointer py-10 flex flex-col items-center justify-center space-y-2">
+                        <i class="fa-solid fa-credit-card text-4xl"></i>
+                        <span class="text-sm font-bold text-textDim">目前沒有登錄信用卡，點擊新增</span>
+                    </div>
+                `;
+                limitsContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">請先至「卡片」頁面新增卡片</p>`;
                 return;
             }
 
-            toggleLoading(true, "正在智能篩選與配置考題...");
+            // 1. 渲染頂部精緻信用卡 Carousel (調整字型大小，避免溢出並優化排版)
+            cards.forEach(card => {
+                const calc = calculateCardSpent(card, 'billing');
+                const recommend = parseFloat(card.recommendedLimit || 0);
+                const pct = recommend > 0 ? Math.min((calc.total / recommend) * 100, 100) : 0;
+                
+                let glowColor = 'bg-accentPrimary shadow-blue-500/20';
+                if (pct >= 90 && pct < 100) glowColor = 'bg-amber-500 shadow-amber-500/30';
+                else if (pct >= 100) glowColor = 'bg-red-500 shadow-red-500/40';
 
-            try {
-                if (G_parsedExamQuestions.length > 0) {
-                    // 軌道一：有匯入光碟題庫 -> 優先從中精準篩選
-                    let pool = G_parsedExamQuestions.filter(q => {
-                        return enabledCategories.some(cat => q.category && q.category.trim() === cat);
+                const cardEl = document.createElement('div');
+                cardEl.className = `flex-none w-72 h-44 rounded-2xl ${card.color} p-4 flex flex-col justify-between shadow-2xl relative overflow-hidden snap-center select-none`;
+                cardEl.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="space-y-1">
+                            <span class="text-xs uppercase font-black tracking-widest text-white/80">${card.bank}</span>
+                            <h4 class="text-lg font-black text-white leading-tight">${card.name}</h4>
+                        </div>
+                        <div class="w-10 h-8 rounded bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white text-xs font-black italic">
+                            VISA
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <span class="text-xs text-white/60 block font-mono font-bold">CARD NUMBER</span>
+                            <span class="text-base font-mono font-bold tracking-wider text-white">••••  ••••  ••••  ${card.lastFour}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-white/60 block font-mono font-bold">EXPIRY</span>
+                            <span class="text-sm font-mono font-bold text-white">${card.expiry}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(cardEl);
+
+                // 2. 建立額度極大化進度視窗 (【高易讀性配色優化】：改用 CSS 動態高對比邊界標籤)
+                const limitCard = document.createElement('div');
+                limitCard.className = "space-y-2";
+                
+                let statusBadge = `<span class="text-xs px-2.5 py-1 rounded-full font-bold status-badge-charging">刷卡中</span>`;
+                if (pct >= 90 && pct < 100) {
+                    statusBadge = `<span class="text-xs px-2.5 py-1 rounded-full font-bold status-badge-warning">接近上限</span>`;
+                } else if (pct >= 100) {
+                    statusBadge = `<span class="text-xs px-2.5 py-1 rounded-full font-bold status-badge-danger">已達回饋上限 (請換卡)</span>`;
+                }
+
+                limitCard.innerHTML = `
+                    <div class="flex justify-between items-center text-sm font-bold">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-extrabold text-textMain text-base">${card.name}</span>
+                            <span class="text-xs font-mono text-textDim font-bold">(${card.lastFour})</span>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    
+                    <div class="w-full bg-bgMain rounded-full h-3.5 overflow-hidden border border-borderMain">
+                        <div class="h-full rounded-full transition-all duration-500 ${glowColor}" style="width: ${pct}%"></div>
+                    </div>
+                    
+                    <div class="flex justify-between text-xs font-mono text-textDim font-bold">
+                        <span>已刷 NT$ ${calc.total.toLocaleString()}</span>
+                        <span>回饋上限 NT$ ${recommend.toLocaleString()}</span>
+                    </div>
+                `;
+                limitsContainer.innerHTML += `
+                    <div class="p-4 bg-bgMain/40 rounded-xl border border-borderMain space-y-2">
+                        ${limitCard.innerHTML}
+                    </div>
+                `;
+            });
+
+            // 3. 計算並更新當月(日曆月)總消費
+            let calendarTotalSum = 0;
+            cards.forEach(card => {
+                const calc = calculateCardSpent(card, 'calendar');
+                calendarTotalSum += calc.total;
+            });
+            document.getElementById('calendar-total').innerText = `NT$ ${calendarTotalSum.toLocaleString()}`;
+
+            // 4. 計算並更新最常使用的刷卡支付管道
+            const payCounts = {};
+            records.forEach(r => {
+                const method = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+                payCounts[method] = (payCounts[method] || 0) + 1;
+            });
+            let topPay = '無紀錄';
+            let topCount = 0;
+            for (const [key, val] of Object.entries(payCounts)) {
+                if (val > topCount) {
+                    topCount = val;
+                    topPay = key;
+                }
+            }
+            document.getElementById('top-pay-method').innerText = topPay;
+            document.getElementById('top-pay-count').innerText = `本月消費 ${topCount} 次`;
+
+            // 5. 渲染最近 3 筆消費紀錄 (放大字型至 14px / 12px)
+            const recentContainer = document.getElementById('dashboard-recent-records');
+            recentContainer.innerHTML = '';
+            
+            const sortedRecords = [...records].sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time)).slice(0, 3);
+            
+            if (sortedRecords.length === 0) {
+                recentContainer.innerHTML = `<p class="text-sm text-textDim text-center py-4 font-bold">目前尚無任何刷卡消費紀錄</p>`;
+                return;
+            }
+
+            sortedRecords.forEach(r => {
+                const card = cards.find(c => c.id === r.cardId) || { name: '未知卡片', lastFour: 'xxxx' };
+                const displayPayMethod = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+                
+                recentContainer.innerHTML += `
+                    <div class="flex items-center justify-between p-4 rounded-xl bg-bgMain/40 hover:bg-bgCard/60 border border-borderMain transition shadow-sm">
+                        <div class="flex items-center space-x-3.5 min-w-0">
+                            <div class="w-10 h-10 rounded-full bg-accentPrimary/10 flex items-center justify-center flex-shrink-0 text-accentPrimary">
+                                <i class="fa-solid fa-shopping-bag text-base"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="text-sm font-bold text-textMain truncate">${r.channel}</h4>
+                                <p class="text-xs text-textDim font-semibold flex items-center gap-1.5 mt-1">
+                                    <span class="truncate">${card.name} (${card.lastFour})</span>
+                                    <span>•</span>
+                                    <span>${displayPayMethod}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0 pl-2">
+                            <span class="text-base font-bold font-mono text-textMain">NT$ ${parseFloat(r.amount).toLocaleString()}</span>
+                            <span class="block text-xs text-textDim font-mono font-semibold mt-1">${r.date}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // ================================= B: 信用卡管理模組 =================================
+        function renderCardsList() {
+            const container = document.getElementById('cards-list-container');
+            container.innerHTML = '';
+
+            if (cards.length === 0) {
+                container.innerHTML = `
+                    <div onclick="openCardModal()" class="w-full bg-bgCard border-2 border-dashed border-borderMain rounded-3xl p-6 text-center text-textDim cursor-pointer py-12 flex flex-col items-center justify-center space-y-3 shadow-sm">
+                        <i class="fa-solid fa-credit-card text-5xl text-textDim"></i>
+                        <div>
+                            <p class="text-base font-bold text-textMain">尚未新增任何信用卡</p>
+                            <p class="text-sm text-textDim mt-1 font-medium">立刻建立您的首張信用卡以管理回饋與額度</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            cards.forEach(card => {
+                const calc = calculateCardSpent(card, 'billing');
+                const recommend = parseFloat(card.recommendedLimit || 0);
+                const pct = recommend > 0 ? Math.min((calc.total / recommend) * 100, 100) : 0;
+                
+                container.innerHTML += `
+                    <div class="bg-bgCard border border-borderMain rounded-3xl overflow-hidden shadow-xl">
+                        <div class="p-5 ${card.color} flex justify-between items-center text-white">
+                            <div>
+                                <span class="text-xs uppercase font-black tracking-widest text-white/80">${card.bank}</span>
+                                <h3 class="text-lg font-black leading-tight">${card.name}</h3>
+                                <p class="text-sm font-mono font-bold tracking-wider mt-1.5">•••• ${card.lastFour}</p>
+                            </div>
+                            <div class="flex space-x-2.5">
+                                <button onclick="openCardModal('${card.id}')" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition"><i class="fa-solid fa-pen text-sm"></i></button>
+                                <button onclick="deleteCard('${card.id}')" class="w-9 h-9 rounded-full bg-white/20 hover:bg-red-500/30 flex items-center justify-center transition"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                            </div>
+                        </div>
+                        <div class="p-5 bg-bgMain/20 space-y-4">
+                            <div class="grid grid-cols-2 gap-4 text-sm font-bold">
+                                <div>
+                                    <span class="text-textDim block text-xs font-semibold mb-1">結帳期制度</span>
+                                    <span class="text-textMain">${card.billingCycleType === 'calendar' ? '整個月曆月 (1~31日)' : `每月 ${card.billingDay} 號結帳`}</span>
+                                </div>
+                                <div>
+                                    <span class="text-textDim block text-xs font-semibold mb-1">有效期限</span>
+                                    <span class="text-textMain font-mono">${card.expiry}</span>
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-borderMain">
+                                <div class="flex justify-between text-sm mb-2 font-bold">
+                                    <span class="text-textDim">當期帳單累積消費</span>
+                                    <span class="font-mono text-textMain">NT$ ${calc.total.toLocaleString()} / NT$ ${recommend.toLocaleString()}</span>
+                                </div>
+                                <div class="w-full bg-bgMain rounded-full h-2.5">
+                                    <div class="bg-accentPrimary h-full rounded-full" style="width: ${pct}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // 彈出新增/編輯卡片視窗
+        function openCardModal(cardId = '') {
+            const modal = document.getElementById('modal-card');
+            const title = document.getElementById('card-modal-title');
+            
+            document.getElementById('card-id').value = '';
+            document.getElementById('card-bank').value = '';
+            document.getElementById('card-name').value = '';
+            document.getElementById('card-last-four').value = '';
+            document.getElementById('card-expiry').value = '';
+            document.getElementById('card-billing-type').value = 'calendar';
+            document.getElementById('card-billing-day').value = '';
+            document.getElementById('card-recommended-limit').value = '';
+            
+            toggleBillingDayField();
+
+            if (cardId) {
+                title.innerText = '編輯信用卡';
+                const card = cards.find(c => c.id === cardId);
+                if (card) {
+                    document.getElementById('card-id').value = card.id;
+                    document.getElementById('card-bank').value = card.bank;
+                    document.getElementById('card-name').value = card.name;
+                    document.getElementById('card-last-four').value = card.lastFour;
+                    document.getElementById('card-expiry').value = card.expiry;
+                    document.getElementById('card-billing-type').value = card.billingCycleType;
+                    document.getElementById('card-billing-day').value = card.billingDay || '';
+                    document.getElementById('card-recommended-limit').value = card.recommendedLimit;
+                    
+                    const colorRadios = document.querySelectorAll('input[name="card-color"]');
+                    colorRadios.forEach(radio => {
+                        if (radio.value === card.color) radio.checked = true;
                     });
-
-                    if (pool.length === 0) {
-                        showToast("目前匯入的題庫中沒有完全符合您勾選題型的題目。");
-                        toggleLoading(false);
-                        return;
-                    }
-
-                    pool.sort(() => Math.random() - 0.5);
-                    G_examQuestions = pool.slice(0, targetCount);
-                    renderQuestionsPreview();
-                    showToast(`已從命題題庫中挑選出 ${G_examQuestions.length} 題指定考題！`);
-                } else if (G_textbookText.trim().length > 0) {
-                    // 軌道二：無題庫但有課本內容 -> AI 依課文及指定難度即時分批生成，確保精準補足 20 題以上！
-                    toggleLoading(true, `正在由 AI 依課文生成全新國語考題 (難度: ${difficulty})...`);
-                    const generated = await generateQuestionsFromTextbook(G_textbookText, targetCount, enabledCategories, difficulty, getApiKey());
-                    if (generated && generated.length > 0) {
-                        // 雙重前端硬性檢驗：過濾任何不合規的AI幻覺類別
-                        G_examQuestions = generated.filter(q => {
-                            return enabledCategories.some(cat => q.category && q.category.trim() === cat);
-                        });
-                        showToast(`成功依教材內容生成 ${G_examQuestions.length} 題指定考題！`);
-                        renderQuestionsPreview();
-                    } else {
-                        throw new Error("AI 無法從此教材段落中生成符合指定題型的考題，請確認檔案內文或多勾選一些題型。");
-                    }
-                } else {
-                    showToast("請先上傳命題光碟題庫或上傳課本電子檔！");
+                    
+                    toggleBillingDayField();
                 }
-            } catch (e) {
-                showToast("出題整合失敗，請確認 API Key 與檔案內文。");
-            } finally {
-                toggleLoading(false);
+            } else {
+                title.innerText = '新增信用卡';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeCardModal() {
+            document.getElementById('modal-card').classList.add('hidden');
+        }
+
+        function toggleBillingDayField() {
+            const type = document.getElementById('card-billing-type').value;
+            const wrapper = document.getElementById('card-billing-day-wrapper');
+            if (type === 'billingDate') {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
             }
         }
 
-        async function generateQuestionsFromTextbook(text, count, categories, difficulty, apiKey) {
-            let finalQuestions = [];
-            let attempts = 0;
-            const maxAttempts = 6; // 預防死迴圈
-            let textPointer = 0;
-            const chunkStep = 4000; // 每一步向前推進 4000 字
+        // 儲存卡片資訊
+        function saveCard() {
+            const id = document.getElementById('card-id').value;
+            const bank = document.getElementById('card-bank').value.trim();
+            const name = document.getElementById('card-name').value.trim();
+            const lastFour = document.getElementById('card-last-four').value.trim();
+            const expiry = document.getElementById('card-expiry').value.trim();
+            const billingCycleType = document.getElementById('card-billing-type').value;
+            const billingDay = document.getElementById('card-billing-day').value;
+            const recommendedLimit = document.getElementById('card-recommended-limit').value;
+            const color = document.querySelector('input[name="card-color"]:checked').value;
 
-            while (finalQuestions.length < count && attempts < maxAttempts) {
-                attempts++;
-                const needed = count - finalQuestions.length;
-                const currentBatchSize = Math.min(5, needed); // 每批次要求 5 題，確保 AI 生成結構不遺失
-
-                // 為了避免過於頻繁呼叫，加上極微小的延遲，兼顧速度與付費 API 限制
-                const startIdx = textPointer % Math.max(1, text.length - 8000);
-                const textSegment = text.substring(startIdx, startIdx + 8000);
-                textPointer += chunkStep;
-
-                toggleLoading(true, `AI 正在解析並分批生成課文考題 (進度: ${finalQuestions.length}/${count})...`);
-
-                const batchQs = await callGenerateBatch(textSegment, currentBatchSize, categories, difficulty, apiKey);
-                if (batchQs && batchQs.length > 0) {
-                    finalQuestions = finalQuestions.concat(batchQs);
-                }
-
-                if (finalQuestions.length < count && attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                }
+            if (!bank || !name || lastFour.length !== 4 || !expiry || !recommendedLimit) {
+                showToast('請完整填寫必填欄位 (卡號須為 4 碼)', 'warn');
+                return;
+            }
+            if (billingCycleType === 'billingDate' && (!billingDay || billingDay < 1 || billingDay > 31)) {
+                showToast('請填寫有效的帳單結帳日 (1 ~ 31日)', 'warn');
+                return;
             }
 
-            return finalQuestions.slice(0, count);
-        }
-
-        async function callGenerateBatch(textSegment, batchSize, categories, difficulty, apiKey) {
-            const systemPrompt = `你是一個專業的台灣國小國語科命題教師。請根據提供的課本教材內容，精準生成指定題數與難度的國語科選擇題。
-【極嚴格！教材情境擷取、生字鎖定與國音還原規範】：
-1. 必須明確指出課名與精確段落：出題時絕對不准直接講『課文第六段...』！你必須明確指出是哪一課的課文（例如：『在第十課〈海洋的殺手〉第六段中...』），並且必須在題幹中包含你提到該段落的核心句子文字，讓學生可以明確在題目中讀取段落前後文情境！
-2. 鎖定生字與認讀字：問字的讀音（字音題）、語詞的解釋（字義題）、漢字怎麼寫（字形題），都必須是本課課文中提及的「核心生字」或「認讀字」！絕對不能隨便抽考非本課生字的普通漢字！
-3. 字音字形大題必須包含「改錯字題型」：
-   - 只要有勾選「字音字形」，除了考注音或漢字之外，你必須設計「改錯字」題目。
-   - 方式：你可以直接擷取課本原句，或是自行設計一段生活化或課文相關句子（蘊含該課核心生字），在題幹中詢問錯字。
-   - **防洩密絕對鋼鐵大限**：改錯字題中，不准用任何雙引號、單引號（如『』、「」）或粗體將你要考的錯字標示出來！必須直接自然寫在句子裡（例如直接寫『他在體育競賽中壇長跑步』，絕對不准寫成『他在體育競賽中『壇』長跑步』），讓學生自己找出錯字！
-4. 拒絕死板問答（情境與詞語解釋擷取）：
-   - 嚴禁出直接詢問『請問「某語詞」是什麼意思？』的無情境死板題目。你必須將手冊中該語詞的「完整詳細解釋」寫入題幹，並要求學生選出正確的字。
-   - 格式：『在第X課〈課名〉句子中「(完整課本段落文字)」中，其中一個詞語的意思是「(詳細完整字典詞義解釋)」，請問「□」中應填入哪一個正確字？』
-5. **防答案外洩挖空大限**：
-   - 只要题目是考正確字形/填入正確國字（如選錯別字、填入部首），題幹句子或詞義中提及該目標字的所有地方，都必須 100% 強制替換為「□」或「（　）」！
-   - 例如要考「鏈」字，題幹在寫到「食物鏈」時必須強制寫成「食物□」！絕對不准把答案字「鏈」大剌剌寫在題幹句子中，以免答案外洩！
-6. **100% 拒絕任何簡體字與大陸口音讀音**：
-   - 四個選項與詳解中，絕對不准出現任何簡體字（如「壳」、「广」、「门」）！干擾項如果需要考形近字，必須使用傳統中文形近字（例如「殼」的干擾項必須是「穀、骰、毀、殻」，絕對不准混入簡體字「壳」，避免答案洩漏）。
-   - 垃圾的注音在台灣標準讀音為【ㄌㄜˋ ㄙㄜˋ】，絕對不准用大陸口音的「ㄌㄚ ㄐㄧ」！且「圾（ㄙㄜˋ）」的字音干擾項，絕對不能用大陸讀音的同音字（如「急、雞、級」等 ㄐㄧˊ 讀音），必須使用台灣標準國語讀音 ㄙㄜˋ 的同音字（如「色、澀、設、瑟」）！
-7. 限制：本批次最多只能生成 ${batchSize} 題！題目大題類別（category）必須從 [${categories.join(', ')}] 中嚴格選擇，不得自創！
-8. 格式：必須返回一個純 JSON 陣列，不包含 \`\`\`json 等 Markdown 包裝字元。
-
-JSON 結構：
-[
-  {
-    "category": "字音字形/基本修辭/文意理解/字詞義及運用",
-    "question": "完整情境題目敘述 (確保注音題之目標字在題幹中為乾淨國字不帶注音，且語詞題必須精確擷取含有該片段的完整課文段落句子作為情境問答)",
-    "options": ["選項1", "選項2", "選項3", "選項4"],
-    "answer": 1~4的數字,
-    "explain": "詳細的台灣標準注音詳解說明"
-  }
-]`;
-
-            const payload = {
-                contents: [{ parts: [{ text: `請幫我從以下教材內容中，出【${difficulty}】難度、符合指定題型的大約 ${batchSize} 題考題：\n\n${textSegment}` }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: { responseMimeType: "application/json" }
+            const cardData = {
+                id: id || 'card-' + Date.now(),
+                bank,
+                name,
+                lastFour,
+                expiry,
+                billingCycleType,
+                billingDay: billingCycleType === 'billingDate' ? parseInt(billingDay) : 1,
+                recommendedLimit: parseFloat(recommendedLimit),
+                color
             };
 
-            const data = await callGeminiAPI(payload, apiKey);
-            try {
-                return JSON.parse(data.candidates[0].content.parts[0].text);
-            } catch(e) {
-                return [];
+            if (id) {
+                const index = cards.findIndex(c => c.id === id);
+                if (index !== -1) cards[index] = cardData;
+                showToast('卡片編輯完成！', 'success');
+            } else {
+                cards.push(cardData);
+                showToast('全新信用卡新增成功！', 'success');
+            }
+
+            saveToLocal();
+            closeCardModal();
+            initApp();
+            triggerAutoCloudSync();
+        }
+
+        function deleteCard(cardId) {
+            const card = cards.find(c => c.id === cardId);
+            if (!card) return;
+
+            showConfirm(
+                '刪除卡片',
+                `確定要刪除「${card.name} (${card.lastFour})」嗎？這會連同其所屬之消費刷卡明細一同清除。`,
+                () => {
+                    cards = cards.filter(c => c.id !== cardId);
+                    records = records.filter(r => r.cardId !== cardId);
+                    saveToLocal();
+                    showToast('卡片及關聯消費已成功移除', 'success');
+                    initApp();
+                    triggerAutoCloudSync();
+                }
+            );
+        }
+
+        // ================================= C: 刷卡明細管理 =================================
+        function populateCardSelectDropdowns() {
+            const dropdown = document.getElementById('record-card');
+            dropdown.innerHTML = '';
+            
+            cards.forEach(card => {
+                dropdown.innerHTML += `<option value="${card.id}">${card.bank} - ${card.name} (${card.lastFour})</option>`;
+            });
+        }
+
+        function renderRecordsList() {
+            const container = document.getElementById('records-list-container');
+            const filterContainer = document.getElementById('record-card-filter-container');
+            const periodMode = document.getElementById('record-period-filter').value;
+            
+            const activeClass = "bg-accentPrimary text-white border-transparent shadow-sm";
+            const inactiveClass = "bg-bgCard text-textDim border-borderMain hover:bg-bgMain";
+            
+            let filterHtml = `
+                <button onclick="filterRecordsByCard('all')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === 'all' ? activeClass : inactiveClass}">
+                    全部卡片
+                </button>
+            `;
+            cards.forEach(card => {
+                filterHtml += `
+                    <button onclick="filterRecordsByCard('${card.id}')" class="flex-shrink-0 px-4 py-2 rounded-full border text-sm font-bold transition ${currentRecordCardFilter === card.id ? activeClass : inactiveClass}">
+                        ${card.name}
+                    </button>
+                `;
+            });
+            filterContainer.innerHTML = filterHtml;
+
+            container.innerHTML = '';
+            let filtered = [...records];
+
+            if (currentRecordCardFilter !== 'all') {
+                filtered = filtered.filter(r => r.cardId === currentRecordCardFilter);
+            }
+
+            if (periodMode === 'calendar') {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const start = new Date(year, month, 1);
+                const end = new Date(year, month + 1, 0, 23, 59, 59);
+                filtered = filtered.filter(r => {
+                    const d = new Date(r.date);
+                    return d >= start && d <= end;
+                });
+            } else if (periodMode === 'billing') {
+                filtered = filtered.filter(r => {
+                    const card = cards.find(c => c.id === r.cardId);
+                    if (!card) return false;
+                    const calc = calculateCardSpent(card, 'billing');
+                    return r.date >= calc.startDate && r.date <= calc.endDate;
+                });
+            }
+
+            filtered.sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-bgCard border border-borderMain rounded-3xl text-textDim space-y-2 shadow-sm">
+                        <i class="fa-solid fa-list-check text-4xl"></i>
+                        <p class="text-sm font-bold">在此區間下沒有找到任何消費紀錄</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(r => {
+                const card = cards.find(c => c.id === r.cardId) || { name: '未知卡片', lastFour: 'xxxx', color: 'card-dark' };
+                const displayPayMethod = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+
+                container.innerHTML += `
+                    <div class="bg-bgCard border border-borderMain rounded-2xl p-4.5 flex justify-between items-center hover:border-textDim/20 transition shadow-sm">
+                        <div class="flex items-center space-x-3.5 min-w-0">
+                            <div class="w-3 h-12 rounded-full ${card.color} flex-shrink-0"></div>
+                            
+                            <div class="min-w-0 space-y-1">
+                                <h4 class="text-base font-bold text-textMain truncate leading-tight">${r.channel}</h4>
+                                <div class="flex items-center space-x-2 text-xs text-textDim font-bold">
+                                    <span class="truncate">${card.name}</span>
+                                    <span>•</span>
+                                    <span class="truncate">${displayPayMethod}</span>
+                                </div>
+                                ${r.item ? `<p class="text-sm text-textDim font-semibold truncate bg-bgMain/40 px-2 py-0.5 rounded">${r.item}</p>` : ''}
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3.5 flex-shrink-0 pl-2">
+                            <div class="text-right">
+                                <span class="text-base font-bold font-mono text-textMain block">NT$ ${parseFloat(r.amount).toLocaleString()}</span>
+                                <span class="text-xs text-textDim font-mono font-bold block mt-0.5">${r.date} ${r.time}</span>
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="openAddRecordModal('${r.id}')" class="text-textDim hover:text-textMain transition p-1 text-sm"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteRecord('${r.id}')" class="text-textDim hover:text-red-500 transition p-1 text-sm"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterRecordsByCard(cardId) {
+            currentRecordCardFilter = cardId;
+            renderRecordsList();
+        }
+
+        function openAddRecordModal(recordId = '') {
+            if (cards.length === 0) {
+                showToast('請先新增最少一張信用卡！', 'warn');
+                switchTab('cards');
+                return;
+            }
+
+            const modal = document.getElementById('modal-record');
+            const title = document.getElementById('record-modal-title');
+            
+            document.getElementById('record-id').value = '';
+            document.getElementById('record-amount').value = '';
+            document.getElementById('record-channel').value = '';
+            document.getElementById('record-item').value = '';
+            document.getElementById('record-pay-method').value = '實體卡';
+            document.getElementById('record-pay-other').value = '';
+            
+            const now = new Date();
+            document.getElementById('record-date').value = now.toISOString().split('T')[0];
+            document.getElementById('record-time').value = now.toTimeString().substring(0, 5);
+            
+            populateCardSelectDropdowns();
+            togglePayMethodOtherField();
+
+            if (recordId) {
+                title.innerText = '編輯刷卡紀錄';
+                const r = records.find(item => item.id === recordId);
+                if (r) {
+                    document.getElementById('record-id').value = r.id;
+                    document.getElementById('record-card').value = r.cardId;
+                    document.getElementById('record-amount').value = r.amount;
+                    document.getElementById('record-date').value = r.date;
+                    document.getElementById('record-time').value = r.time;
+                    document.getElementById('record-channel').value = r.channel;
+                    document.getElementById('record-item').value = r.item;
+                    document.getElementById('record-pay-method').value = r.payMethod;
+                    document.getElementById('record-pay-other').value = r.payMethodOther || '';
+                    
+                    togglePayMethodOtherField();
+                }
+            } else {
+                title.innerText = '記錄一筆刷卡';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeRecordModal() {
+            document.getElementById('modal-record').classList.add('hidden');
+        }
+
+        function togglePayMethodOtherField() {
+            const method = document.getElementById('record-pay-method').value;
+            const wrapper = document.getElementById('record-pay-other-wrapper');
+            if (method === '其他') {
+                wrapper.classList.remove('hidden');
+                const defaultOther = localStorage.getItem('cc_other_pay') || '自訂支付';
+                document.getElementById('record-pay-other').value = defaultOther;
+            } else {
+                wrapper.classList.add('hidden');
             }
         }
 
-        function renderQuestionsPreview() {
-            document.getElementById('introPanel').classList.add('hidden');
-            document.getElementById('examResultPanel').classList.remove('hidden');
-            const container = document.getElementById('examQuestionsPreview'); container.innerHTML = '';
+        function saveRecord() {
+            const id = document.getElementById('record-id').value;
+            const cardId = document.getElementById('record-card').value;
+            const amount = document.getElementById('record-amount').value.trim();
+            const date = document.getElementById('record-date').value;
+            const time = document.getElementById('record-time').value;
+            const channel = document.getElementById('record-channel').value.trim();
+            const item = document.getElementById('record-item').value.trim();
+            const payMethod = document.getElementById('record-pay-method').value;
+            const payMethodOther = document.getElementById('record-pay-other').value.trim();
+
+            if (!cardId || !amount || !date || !time || !channel) {
+                showToast('請完整填寫消費金額、日期與通路等必填欄位！', 'warn');
+                return;
+            }
+
+            const recordData = {
+                id: id || 'r-' + Date.now(),
+                cardId,
+                amount: parseFloat(amount),
+                date,
+                time,
+                channel,
+                item,
+                payMethod,
+                payMethodOther: payMethod === '其他' ? payMethodOther : ''
+            };
+
+            if (id) {
+                const index = records.findIndex(r => r.id === id);
+                if (index !== -1) records[index] = recordData;
+                showToast('刷卡消費紀錄編輯成功！', 'success');
+            } else {
+                records.push(recordData);
+                showToast('消費紀錄成功寫入！', 'success');
+            }
+
+            saveToLocal();
+            closeRecordModal();
+            initApp();
+            triggerAutoCloudSync();
+        }
+
+        function deleteRecord(recordId) {
+            showConfirm(
+                '刪除消費明細',
+                '確定要刪除此筆刷卡消費明細嗎？此操作不可還原。',
+                () => {
+                    records = records.filter(r => r.id !== recordId);
+                    saveToLocal();
+                    showToast('已刪除該消費明細', 'success');
+                    initApp();
+                    triggerAutoCloudSync();
+                }
+            );
+        }
+
+        // ================================= D: Chart.js 圖表分析 =================================
+        function updateCharts() {
+            if (cards.length === 0 || records.length === 0) return;
+
+            const timeFilter = document.getElementById('chart-time-filter').value;
+            let filtered = [...records];
             
-            // 在前端對 AI 生成考題執行終極字音防洩密、課文錯別字挖空與多音對齊
-            G_examQuestions = G_examQuestions.map(q => {
-                // 如果是字音字形，強制對「垃圾(ㄌㄜˋㄙㄜˋ)」、「噸(ㄉㄨㄣˋ)」、「循(ㄒㄩㄣˊ)」、「鏈」等台灣音對齊
-                if (q.category === "字音字形") {
-                    let answerText = q.options[q.answer - 1];
+            const now = new Date();
+            if (timeFilter === 'current-month') {
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const start = new Date(year, month, 1);
+                filtered = filtered.filter(r => new Date(r.date) >= start);
+            } else if (timeFilter === 'last-30') {
+                const start = new Date();
+                start.setDate(start.getDate() - 30);
+                filtered = filtered.filter(r => new Date(r.date) >= start);
+            }
+
+            // 1. 支付管道佔比數據
+            const payMethodsMap = {};
+            filtered.forEach(r => {
+                const method = r.payMethod === '其他' ? (r.payMethodOther || '其他') : r.payMethod;
+                payMethodsMap[method] = (payMethodsMap[method] || 0) + parseFloat(r.amount);
+            });
+            const payLabels = Object.keys(payMethodsMap);
+            const payData = Object.values(payMethodsMap);
+
+            // 2. 趨勢累計數據
+            const trendMap = {};
+            for (let i = 14; i >= 0; i--) {
+                const dStr = getRelativeDate(-i);
+                trendMap[dStr] = 0;
+            }
+            filtered.forEach(r => {
+                if (trendMap[r.date] !== undefined) {
+                    trendMap[r.date] += parseFloat(r.amount);
+                }
+            });
+            const trendLabels = Object.keys(trendMap).map(d => d.substring(5));
+            let runningTotal = 0;
+            const trendData = Object.values(trendMap).map(val => {
+                runningTotal += val;
+                return runningTotal;
+            });
+
+            // 3. 各信用卡消費總額
+            const cardUsageMap = {};
+            cards.forEach(c => { cardUsageMap[c.name] = 0; });
+            filtered.forEach(r => {
+                const card = cards.find(c => c.id === r.cardId);
+                if (card) {
+                    cardUsageMap[card.name] = (cardUsageMap[card.name] || 0) + parseFloat(r.amount);
+                }
+            });
+            const cardLabels = Object.keys(cardUsageMap);
+            const cardData = Object.values(cardUsageMap);
+
+            if (payMethodChartInstance) payMethodChartInstance.destroy();
+            if (trendLineChartInstance) trendLineChartInstance.destroy();
+            if (cardUsageChartInstance) cardUsageChartInstance.destroy();
+
+            const style = getComputedStyle(document.body);
+            const textDimColor = style.getPropertyValue('--text-dim').trim();
+            const borderMainColor = style.getPropertyValue('--border-main').trim();
+
+            // A. Pie Chart
+            const ctx1 = document.getElementById('payMethodChart').getContext('2d');
+            payMethodChartInstance = new Chart(ctx1, {
+                type: 'pie',
+                data: {
+                    labels: payLabels,
+                    datasets: [{
+                        data: payData,
+                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F43F5E', '#6B7280'],
+                        borderWidth: 1,
+                        borderColor: borderMainColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: textDimColor, font: { size: 11, weight: 'bold' } } }
+                    }
+                }
+            });
+
+            // B. Line Chart
+            const ctx2 = document.getElementById('trendLineChart').getContext('2d');
+            trendLineChartInstance = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: '累計刷卡金額 (NT$)',
+                        data: trendData,
+                        borderColor: '#1D4ED8',
+                        backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2.5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 10, weight: 'bold' } } },
+                        y: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 10, weight: 'bold' } } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // C. Bar Chart
+            const ctx3 = document.getElementById('cardUsageChart').getContext('2d');
+            cardUsageChartInstance = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: cardLabels,
+                    datasets: [{
+                        data: cardData,
+                        backgroundColor: ['#EF4444', '#F59E0B', '#1D4ED8', '#10B981', '#8B5CF6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: textDimColor, font: { size: 11, weight: 'bold' } } },
+                        y: { grid: { color: borderMainColor }, ticks: { color: textDimColor, font: { size: 11, weight: 'bold' } } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // ================================= E: 設定與雲端備份 =================================
+        // 背景自動快取融合機制 (【核心優化】：有卡片變動時自動觸發)
+        function triggerAutoCloudSync() {
+            if (googleAccessToken) {
+                executeCloudSync(true);
+            }
+        }
+
+        function openSyncSettings() {
+            switchTab('settings');
+            document.getElementById('setting-client-id').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function saveSyncSettings() {
+            const clientId = document.getElementById('setting-client-id').value.trim();
+            const apiKey = document.getElementById('setting-api-key').value.trim();
+
+            if (!clientId || !apiKey) {
+                showToast('請正確填入您的 Google API Key 與 Client ID', 'warn');
+                return;
+            }
+
+            localStorage.setItem('cc_google_client_id', clientId);
+            localStorage.setItem('cc_google_api_key', apiKey);
+            localStorage.setItem('cc_google_sync_enabled', 'true');
+            
+            showToast('Google API 設定已儲存！正在重整頁面載入同步模組...', 'success');
+            setTimeout(() => { location.reload(); }, 1000);
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ cards, records }));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `CardControl_Backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('本機設定檔備份 JSON 匯出成功！', 'success');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.cards && parsed.records) {
+                        cards = parsed.cards;
+                        records = parsed.records;
+                        saveToLocal();
+                        showToast('JSON 設定與消費數據已成功匯入！', 'success');
+                        initApp();
+                    } else {
+                        showToast('匯入失敗：JSON 結構不符預期格式', 'error');
+                    }
+                } catch(err) {
+                    showToast('檔案格式錯誤，無法正確解析。', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function confirmClearData() {
+            showConfirm(
+                '清除所有資料',
+                '這將永久清空所有在本機儲存的信用卡、帳單資訊及刷卡明細，請確保已做好備份。',
+                () => {
+                    localStorage.clear();
+                    cards = [];
+                    records = [];
+                    showToast('資料已完全清空！', 'success');
+                    initApp();
+                }
+            );
+        }
+
+        // ================================= Google Drive API 同步機制 =================================
+        function gapiLoad() {
+            gapi.load('client', () => {
+                gapiInited = true;
+                checkGisGapiInit();
+            });
+        }
+
+        function gisLoad() {
+            const storedClientId = localStorage.getItem('cc_google_client_id');
+            if (storedClientId) {
+                googleTokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: storedClientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata',
+                    callback: (tokenResponse) => {
+                        if (tokenResponse.error !== undefined) {
+                            showToast('Google 帳戶授權失敗：' + tokenResponse.error, 'error');
+                            return;
+                        }
+                        googleAccessToken = tokenResponse.access_token;
+                        
+                        // 儲存權限金鑰與過期時間，實現免重複登入
+                        localStorage.setItem('cc_google_access_token', googleAccessToken);
+                        localStorage.setItem('cc_google_token_expiry', Date.now() + (tokenResponse.expires_in * 1000));
+                        
+                        document.getElementById('google-sync-btn').disabled = false;
+                        updateSyncBadge('connected');
+                        executeCloudSync(false); // 顯性手動點擊
+                    },
+                });
+                gisInited = true;
+                checkGisGapiInit();
+            }
+        }
+
+        function checkGisGapiInit() {
+            if (!gapiInited || !gisInited) return;
+            document.getElementById('google-sync-btn').disabled = false;
+            
+            // 讀取快取登入狀態
+            const cachedToken = localStorage.getItem('cc_google_access_token');
+            const expiry = localStorage.getItem('cc_google_token_expiry');
+            if (cachedToken && expiry && Date.now() < parseInt(expiry)) {
+                googleAccessToken = cachedToken;
+                updateSyncBadge('connected');
+                executeCloudSync(true); // 自動背景快取靜默同步 (一開App立即抓取最新)
+            }
+        }
+
+        function updateSyncBadge(status) {
+            const badge = document.getElementById('sync-status');
+            badge.onclick = null; // 重設
+            if (status === 'connected') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-green-950 text-emerald-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 已連結 Google`;
+                badge.onclick = () => { syncWithGoogle(); };
+            } else if (status === 'syncing') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-amber-950 text-amber-500 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> 正在同步中`;
+            } else if (status === 'success') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-blue-950 text-blue-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-400"></span> 雲端同步成功`;
+                setTimeout(() => { if (googleAccessToken) updateSyncBadge('connected'); else updateSyncBadge('disconnected'); }, 4000);
+            } else if (status === 'expired') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-red-950 text-red-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> 連線逾期，點此`;
+                badge.onclick = () => { syncWithGoogle(); };
+            } else if (status === 'error') {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-red-950 text-red-400 flex items-center gap-2 transition-all duration-300 font-bold shadow-sm cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> 同步失敗，點此`;
+                badge.onclick = () => { syncWithGoogle(); };
+            } else {
+                badge.className = "text-sm px-3 py-1.5 rounded-full bg-bgMain border border-borderMain text-textDim flex items-center gap-2 transition-all duration-300 font-bold cursor-pointer";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-gray-500 animate-pulse"></span> 未連結，點此同步`;
+                badge.onclick = () => { syncWithGoogle(); };
+            }
+        }
+
+        function syncWithGoogle(isBackground = false) {
+            const expiry = localStorage.getItem('cc_google_token_expiry');
+            if (!googleAccessToken || (expiry && Date.now() > parseInt(expiry))) {
+                if (googleTokenClient) {
+                    googleTokenClient.requestAccessToken({ prompt: 'consent' });
+                } else {
+                    showToast('請先於設定中儲存您的 Google API 金鑰與 Client ID！', 'warn');
+                    switchTab('settings');
+                }
+            } else {
+                executeCloudSync(isBackground);
+            }
+        }
+
+        async function executeCloudSync(isBackground = false) {
+            if (!googleAccessToken) return;
+            if (!isBackground) updateSyncBadge('syncing');
+            
+            try {
+                // 安全設定：將 API 金鑰與 OAuth 權限傳遞給 gapi client
+                gapi.client.setApiKey(localStorage.getItem('cc_google_api_key'));
+                gapi.client.setToken({ access_token: googleAccessToken });
+                await gapi.client.load('drive', 'v3');
+                
+                // 搜尋雲端有無備份檔案
+                const response = await gapi.client.drive.files.list({
+                    q: "name = 'cc_manager_backup.json' and trashed = false",
+                    fields: 'files(id, name, modifiedTime)',
+                    spaces: 'appDataFolder'
+                });
+
+                const files = response.result.files;
+                const localUpdateTimeStr = localStorage.getItem('cc_last_local_update');
+                const backupData = {
+                    cards: cards,
+                    records: records,
+                    lastUpdated: localUpdateTimeStr || new Date().toISOString()
+                };
+
+                if (files && files.length > 0) {
+                    const fileId = files[0].id;
                     
-                    // 【鋼鐵遮蔽原則】：如果題目是詢問該字怎麼寫（字形/錯別字），
-                    // 題幹中出現該答案字（如「殼」、「鏈」、「循」）的所有地方，100% 強制更換為「□」或「（　）」！
-                    if (q.question.includes("正確的寫法") || q.question.includes("正確字形") || q.question.includes("正確寫法") || q.question.includes("填入") || q.question.includes("寫法正確")) {
-                        if (answerText && answerText.length === 1) {
-                            let maskRegex = new RegExp(answerText, "g");
-                            q.question = q.question.replace(maskRegex, "□");
+                    const fileContentRes = await gapi.client.drive.files.get({
+                        fileId: fileId,
+                        alt: 'media'
+                    });
+                    
+                    const cloudData = fileContentRes.result;
+                    
+                    if (cloudData && cloudData.lastUpdated) {
+                        const cloudTime = new Date(cloudData.lastUpdated);
+                        const localTime = localUpdateTimeStr ? new Date(localUpdateTimeStr) : new Date(0);
+                        
+                        // 【雙向融合核心邏輯修正】：
+                        // 本機為 epoch (全新裝置首次登入) 或者是雲端時間較新時 -> 無條件強制下載覆寫，完美拉取電腦資料
+                        if (localTime.getTime() === 0 || cloudTime > localTime) {
+                            cards = cloudData.cards || [];
+                            records = cloudData.records || [];
+                            localStorage.setItem('cc_cards', JSON.stringify(cards));
+                            localStorage.setItem('cc_records', JSON.stringify(records));
+                            localStorage.setItem('cc_last_local_update', cloudData.lastUpdated);
+                            if (!isBackground) showToast('已成功從雲端同步下載最新資料！', 'success');
+                            initApp();
+                            updateSyncBadge('success');
+                            return;
                         }
                     }
 
-                    // 對多載字音實施本土化對稱替換
-                    if (q.question.includes("垃圾") || q.question.includes("圾")) {
-                        q.options = q.options.map(opt => {
-                            if (opt.includes("急") || opt.includes("及") || opt.includes("急") || opt.includes("急")) {
-                                return opt.replace("及", "澀").replace("急", "色").replace("級", "設");
-                            }
-                            return opt;
-                        });
-                    }
+                    // 本機較新：覆寫雲端
+                    await updateCloudFile(fileId, backupData);
+                } else {
+                    // 全新專案：在雲端建立備份
+                    await createCloudFile(backupData);
                 }
-                return q;
-            });
-
-            G_examQuestions.forEach((q, idx) => {
-                const card = document.createElement('div');
-                card.className = "p-4 mb-4 bg-slate-50 rounded-xl border border-slate-100 text-sm";
-                card.innerHTML = `
-                    <div class="font-bold mb-1">[${q.category}] Q${idx+1}. (　　) ${q.question}</div>
-                    <div class="grid grid-cols-2 gap-1 text-xs text-slate-600 mb-2">
-                        <div>① ${q.options[0]}</div><div>② ${q.options[1]}</div><div>③ ${q.options[2]}</div><div>④ ${q.options[3]}</div>
-                    </div>
-                    <div class="text-xs text-indigo-700 bg-indigo-50 p-2 rounded">正解：選項 ${q.answer} | 詳解：${q.explain||'無'}</div>`;
-                container.appendChild(card);
-            });
-        }
-
-        function startQuizMission() { document.getElementById('quizModal').classList.remove('hidden'); }
-        function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); clearInterval(G_quizTimerInterval); }
-
-        function launchQuizPlay() {
-            document.getElementById('quizConfigScreen').classList.add('hidden');
-            document.getElementById('quizScoreScreen').classList.add('hidden');
-            document.getElementById('quizPlayScreen').classList.remove('hidden');
-            
-            const allowRepeatHistory = document.getElementById('quizAllowRepeatHistory').checked;
-            let pool = JSON.parse(JSON.stringify(G_examQuestions));
-            
-            if (!allowRepeatHistory) {
-                const filtered = pool.filter(q => !G_seenQuestionTexts.has(q.question));
-                if (filtered.length === 0) {
-                    showToast("本大題內歷史題目均已抽過，自動清空排重歷史記錄！");
-                    G_seenQuestionTexts.clear();
-                } else { pool = filtered; }
-            }
-
-            G_quizQuestions = pool;
-            if (document.getElementById('quizShuffleQs').checked) G_quizQuestions.sort(() => Math.random() - 0.5);
-            G_quizCurrentIndex = 0; G_quizWrongList = [];
-            
-            // 答題任務成績統計初始化
-            G_quizScoreData = { score: 0, correct: 0, wrong: 0, wrongQuestionsList: [] };
-
-            loadQuizQuestion(G_quizCurrentIndex);
-        }
-
-        function loadQuizQuestion(index) {
-            if (index >= G_quizQuestions.length) {
-                if (document.getElementById('quizRepeatWrong').checked && G_quizWrongList.length > 0) {
-                    G_quizQuestions = JSON.parse(JSON.stringify(G_quizWrongList)); G_quizWrongList = []; G_quizCurrentIndex = 0; loadQuizQuestion(0); return;
-                }
-                finishQuizPlay(); return;
-            }
-            G_quizAnswered = false; // 重設鎖定狀態，允許作答
-            const q = G_quizQuestions[index];
-            document.getElementById('quizProgressText').textContent = `第 ${index + 1} / ${G_quizQuestions.length} 題`;
-            document.getElementById('quizQuestionTag').textContent = q.category;
-            document.getElementById('quizQuestionBody').textContent = q.question;
-
-            let optionsObj = q.options.map((text, idx) => ({ text, originIndex: idx + 1 }));
-            if (document.getElementById('quizShuffleOpts').checked) optionsObj.sort(() => Math.random() - 0.5);
-
-            G_quizCurrentMapping = {};
-            optionsObj.forEach((opt, idx) => { G_quizCurrentMapping[opt.originIndex] = idx + 1; });
-
-            const grid = document.getElementById('quizOptionsGrid'); grid.innerHTML = '';
-            optionsObj.forEach((opt, idx) => {
-                const btn = document.createElement('button');
-                btn.className = "quiz-option-btn w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-sm font-medium transition-all";
-                btn.onclick = () => handleSelectOption(opt.originIndex, q.answer, q);
-                btn.textContent = `${idx + 1}. ${opt.text}`;
-                grid.appendChild(btn);
-            });
-            document.getElementById('quizFeedbackArea').classList.add('hidden');
-            
-            // 獲取自訂或預設秒數
-            let timerSetting = document.getElementById('quizTimerConfig').value;
-            let secondsValue = 0;
-            if (timerSetting === "custom") {
-                secondsValue = parseInt(document.getElementById('customTimerInput').value) || 30;
-            } else {
-                secondsValue = parseInt(timerSetting) || 0;
-            }
-
-            startQuizTimer(secondsValue);
-        }
-
-        // 精準倒數計時引擎 (支援暫停接續)
-        function startQuizTimer(secondsValue) {
-            clearInterval(G_quizTimerInterval);
-            let timerSetting = document.getElementById('quizTimerConfig').value;
-            let limit = timerSetting === "custom" ? (parseInt(document.getElementById('customTimerInput').value) || 30) : (parseInt(timerSetting) || 0);
-            if (limit === 0) { document.getElementById('quizTimerContainer').classList.add('hidden'); return; }
-            document.getElementById('quizTimerContainer').classList.remove('hidden');
-            
-            G_quizTimerValue = secondsValue;
-            document.getElementById('quizTimerText').textContent = `${G_quizTimerValue}s`;
-            
-            G_quizTimerInterval = setInterval(() => {
-                G_quizTimerValue--;
-                document.getElementById('quizTimerText').textContent = `${G_quizTimerValue}s`;
-                if (G_quizTimerValue <= 0) { clearInterval(G_quizTimerInterval); handleTimeOut(); }
-            }, 1000);
-        }
-
-        function pauseQuizPlay() { 
-            clearInterval(G_quizTimerInterval); 
-            document.getElementById('quizPauseOverlay').classList.remove('hidden'); 
-        }
-        
-        function resumeQuizPlay() { 
-            document.getElementById('quizPauseOverlay').classList.add('hidden'); 
-            startQuizTimer(G_quizTimerValue); // 接續暫停時的精確秒數往下走
-        }
-        
-        function exitQuizToHome() { closeQuizModal(); document.getElementById('quizConfigScreen').classList.remove('hidden'); }
-
-        function handleSelectOption(chosenIdx, correctIdx, questionObj) {
-            if (G_quizAnswered) return; // 【核心修正一】：若已經點選過，直接返回，防連續點擊！
-            G_quizAnswered = true;
-            clearInterval(G_quizTimerInterval);
-            G_seenQuestionTexts.add(questionObj.question);
-
-            // 【核心修正二】：一旦選中，物理鎖死所有按鈕，不允許二次點選或更換選項！
-            const buttons = document.querySelectorAll(".quiz-option-btn");
-            buttons.forEach(btn => {
-                btn.disabled = true;
-                btn.classList.add("opacity-50", "cursor-not-allowed");
-                btn.classList.remove("hover:bg-slate-50");
-            });
-
-            const isCorrect = (chosenIdx === correctIdx);
-            
-            const correctShuffledIdx = G_quizCurrentMapping[correctIdx];
-            const chosenShuffledIdx = G_quizCurrentMapping[chosenIdx];
-            
-            if (isCorrect) {
-                G_quizScoreData.correct++;
-            } else {
-                G_quizWrongList.push(questionObj);
-                G_quizScoreData.wrong++;
-                G_quizScoreData.wrongQuestionsList.push({
-                    question: questionObj.question,
-                    category: questionObj.category,
-                    chosen: questionObj.options[chosenIdx - 1] || "未選擇",
-                    correct: questionObj.options[correctIdx - 1],
-                    explain: questionObj.explain || "無"
-                });
-            }
-            
-            let rewrittenExplain = questionObj.explain || "";
-            if (document.getElementById('quizShuffleOpts').checked && rewrittenExplain) {
-                const circles = ['①', '②', '③', '④'];
-                circles.forEach((sym, i) => { rewrittenExplain = rewrittenExplain.replaceAll(sym, `__OPT${i+1}__`); });
-                for (let i = 1; i <= 4; i++) { rewrittenExplain = rewrittenExplain.replaceAll(`__OPT${i}__`, circles[G_quizCurrentMapping[i] - 1]); }
-            }
-            showQuizFeedback(isCorrect, correctShuffledIdx, rewrittenExplain, questionObj.options, correctIdx);
-        }
-
-        function handleTimeOut() {
-            if (G_quizAnswered) return;
-            G_quizAnswered = true;
-            const buttons = document.querySelectorAll(".quiz-option-btn");
-            buttons.forEach(btn => {
-                btn.disabled = true;
-                btn.classList.add("opacity-50", "cursor-not-allowed");
-            });
-
-            const q = G_quizQuestions[G_quizCurrentIndex]; 
-            G_quizWrongList.push(q); 
-            G_seenQuestionTexts.add(q.question);
-            G_quizScoreData.wrong++;
-            G_quizScoreData.wrongQuestionsList.push({
-                question: q.question,
-                category: q.category,
-                chosen: "時間超時",
-                correct: q.options[q.answer - 1],
-                explain: q.explain || "無"
-            });
-            showQuizFeedback(false, G_quizCurrentMapping[q.answer], q.explain, q.options, q.answer);
-        }
-
-        function showQuizFeedback(isCorrect, correctShuffledIdx, explainText, options, originalCorrectIdx) {
-            const area = document.getElementById('quizFeedbackArea'); area.classList.remove('hidden');
-            const status = document.getElementById('quizFeedbackStatus');
-            status.className = isCorrect ? "text-emerald-600 font-bold" : "text-rose-600 font-bold";
-            status.textContent = isCorrect ? "🎉 答對了！非常優秀！" : `❌ 答錯了！(正確解答為：選項 ${correctShuffledIdx}. ${options[originalCorrectIdx-1]})`;
-            document.getElementById('quizFeedbackExplain').textContent = `詳解說明：${explainText||'無'}`;
-        }
-
-        function handleQuizNextQuestion() { G_quizCurrentIndex++; loadQuizQuestion(G_quizCurrentIndex); }
-
-        function finishQuizPlay() {
-            document.getElementById('quizPlayScreen').classList.add('hidden'); 
-            const scoreScreen = document.getElementById('quizScoreScreen');
-            scoreScreen.classList.remove('hidden'); 
-
-            // 計算最終得分
-            const totalQs = G_quizQuestions.length;
-            const finalScore = Math.round((G_quizScoreData.correct / totalQs) * 100);
-            
-            document.getElementById('quizScoreText').textContent = finalScore;
-            document.getElementById('quizCorrectCountText').textContent = `${G_quizScoreData.correct} / ${totalQs} 題`;
-            document.getElementById('quizWrongCountText').textContent = `${G_quizScoreData.wrong} / ${totalQs} 題`;
-
-            // 渲染錯題檢討列表
-            const container = document.getElementById('quizWrongQuestionsContainer');
-            container.innerHTML = '';
-
-            if (G_quizScoreData.wrongQuestionsList.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8 text-emerald-600 font-bold text-sm bg-emerald-50 border border-emerald-100 rounded-2xl">
-                        🌟 恭喜！本次挑戰全對，沒有任何錯題喔！老師為你感到無比驕傲！
-                    </div>
-                `;
-            } else {
-                G_quizScoreData.wrongQuestionsList.forEach((wq, idx) => {
-                    const card = document.createElement('div');
-                    card.className = "p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs space-y-2";
-                    card.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <span class="px-2 py-0.5 bg-rose-200 text-rose-800 font-black rounded-md">${wq.category}</span>
-                            <span class="text-slate-400 font-bold">檢討 #${idx + 1}</span>
-                        </div>
-                        <p class="font-bold text-slate-800 text-sm leading-relaxed">${wq.question}</p>
-                        <div class="grid grid-cols-2 gap-2 font-medium">
-                            <div class="text-rose-600">你的選擇：${wq.chosen}</div>
-                            <div class="text-emerald-600">正確解答：${wq.correct}</div>
-                        </div>
-                        <div class="pt-2 border-t border-rose-100 text-slate-600 leading-relaxed bg-white/50 p-2 rounded-lg">
-                            <span class="font-bold text-indigo-700">解析說明：</span>${wq.explain}
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            }
-        }
-
-        async function callGeminiAPI(payload, apiKey) {
-            const models = ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-pro"];
-            let lastError = null;
-            for (let model of models) {
-                try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (res.ok) {
-                        return await res.json();
-                    } else {
-                        const errText = await res.text();
-                        lastError = `API 錯誤 (${res.status}): ${errText}`;
-                        console.warn(`模型 ${model} 呼叫失敗: ${lastError}`);
-                    }
-                } catch (e) {
-                    lastError = e.message;
-                    console.warn(`模型 ${model} 連線失敗: ${e}`);
+                
+                localStorage.setItem('cc_last_local_update', backupData.lastUpdated);
+                if (!isBackground) showToast('資料已成功與雲端儲存空間同步備份！', 'success');
+                updateSyncBadge('success');
+                
+            } catch(err) {
+                console.error("同步失敗詳細資訊：", err);
+                if (err.status === 401) {
+                    googleAccessToken = null;
+                    localStorage.removeItem('cc_google_access_token');
+                    updateSyncBadge('expired');
+                } else {
+                    if (!isBackground) showToast('雲端連結被拒，請點擊同步按鈕重新驗證。', 'error');
+                    updateSyncBadge('error');
                 }
             }
-            throw new Error(lastError || "連線失敗，請確認網路與金鑰");
         }
-        function clearUploadedTextbook() { document.getElementById('textbookUpload').value = ''; document.getElementById('textbookStatus').classList.add('hidden'); G_textbookText = ""; }
-        function clearUploadedExam() { document.getElementById('examUpload').value = ''; document.getElementById('examStatus').classList.add('hidden'); G_parsedExamQuestions = []; }
+
+        // 採用安全 RFC Multipart 格式，確保 metadata (parents, name) 在 appDataFolder 中正確定位
+        function createCloudFile(data) {
+            const boundary = 'foo_bar_baz';
+            const delimiter = "\r\n--" + boundary + "\r\n";
+            const close_delim = "\r\n--" + boundary + "--";
+            
+            const metadata = {
+                name: 'cc_manager_backup.json',
+                mimeType: 'application/json',
+                parents: ['appDataFolder']
+            };
+            
+            const multipartRequestBody =
+                delimiter +
+                'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                JSON.stringify(metadata) +
+                delimiter +
+                'Content-Type: application/json\r\n\r\n' +
+                JSON.stringify(data) +
+                close_delim;
+
+            return gapi.client.request({
+                path: '/upload/drive/v3/files',
+                method: 'POST',
+                params: { uploadType: 'multipart' },
+                headers: { 'Content-Type': 'multipart/related; boundary=' + boundary },
+                body: multipartRequestBody
+            });
+        }
+
+        function updateCloudFile(fileId, data) {
+            return gapi.client.request({
+                path: `/upload/drive/v3/files/${fileId}`,
+                method: 'PATCH',
+                params: { uploadType: 'media' },
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        }
     </script>
 </body>
 </html>
